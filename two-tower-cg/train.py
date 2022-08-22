@@ -29,10 +29,10 @@ def run_training(data: PreprocessedHmData,
                   metrics=[CustomRecall(k=100), CustomRecall(k=500), CustomRecall(k=1000)],
                   run_eagerly=True)
 
-    model.fit(x=data.train_ds,
-              epochs=config.nb_epochs,
-              steps_per_epoch=data.nb_train_obs // config.batch_size,
-              validation_data=data.test_ds,
-              validation_steps=data.nb_test_obs // config.batch_size,
-              callbacks=get_callbacks(),
-              verbose=1)
+    return model.fit(x=data.train_ds,
+                     epochs=config.nb_epochs,
+                     steps_per_epoch=data.nb_train_obs // config.batch_size,
+                     validation_data=data.test_ds,
+                     validation_steps=data.nb_test_obs // config.batch_size,
+                     callbacks=get_callbacks(),
+                     verbose=1)
