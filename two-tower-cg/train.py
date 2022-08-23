@@ -31,7 +31,7 @@ def run_training(data: PreprocessedHmData,
     model = Basic2TowerModel(customer_model, article_model, data)
     model.compile(optimizer=tf.keras.optimizers.Adagrad(learning_rate=config.learning_rate),
                   metrics=[CustomRecall(k=100), CustomRecall(k=500), CustomRecall(k=1000)],
-                  run_eagerly=True)
+                  run_eagerly=False)
 
     return model.fit(x=data.train_ds,
                      epochs=config.nb_epochs,
