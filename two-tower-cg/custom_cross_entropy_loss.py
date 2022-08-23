@@ -6,7 +6,7 @@ class CustomCrossEntropyLoss:
         self._label_probs = label_probs
 
     def __call__(self, true_labels, logits, training):
-        batch_size, nb_candidates = tf.shape(logits)
+        batch_size = tf.shape(logits)[0]
 
         if training:
             # Apply log q correction
