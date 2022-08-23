@@ -98,6 +98,9 @@ def preprocess(data: HmData, batch_size) -> PreprocessedHmData:
     transactions_enhanced_df = minimal_trans_df.merge(minimal_cust_df, on='customer_id')
     transactions_enhanced_df = transactions_enhanced_df.merge(minimal_art_df, on='article_id')
 
+    for categ_variable in Variables.ALL_CATEG_VARIABLES:
+        transactions_enhanced_df[categ_variable] = transactions_enhanced_df[categ_variable].astype(str)
+
     train_df, test_df = split_data(transactions_enhanced_df)
     nb_train_obs = train_df.shape[0]
     nb_test_obs = test_df.shape[0]
