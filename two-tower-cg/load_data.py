@@ -50,7 +50,7 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if os.path.exists('train_df.p') and os.path.exists('test_df.p'):
         train_df = pickle.load(open('train_df.p', 'rb'))
         test_df = pickle.load(open('test_df.p', 'rb'))
-        return train_df.iloc[:10000], test_df[:10000], article_df
+        return train_df, test_df, article_df
 
     article_df = pd.read_csv("hmdata/articles.csv.zip")
     customer_df = pd.read_csv("hmdata/customers.csv.zip")
