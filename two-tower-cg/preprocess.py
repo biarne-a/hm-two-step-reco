@@ -92,7 +92,7 @@ def preprocess_customer_data(customer_df):
 
 def preprocess(data: HmData, batch_size) -> PreprocessedHmData:
     preprocess_customer_data(data.customer_df)
-    minimal_trans_df = data.transactions_df[['article_id', 'customer_id']]
+    minimal_trans_df = data.transactions_df[['article_id', 'customer_id', 't_dat']]
     minimal_cust_df = data.customer_df[Variables.CUSTOMER_CATEG_VARIABLES]
     minimal_art_df = data.article_df[Variables.ARTICLE_CATEG_VARIABLES]
     transactions_enhanced_df = minimal_trans_df.merge(minimal_cust_df, on='customer_id')
