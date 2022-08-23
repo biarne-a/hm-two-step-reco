@@ -3,6 +3,7 @@ import tensorflow as tf
 from typing import Dict
 
 from load_data import HmData
+from config import Variables
 
 
 class PreprocessedHmData:
@@ -11,19 +12,17 @@ class PreprocessedHmData:
                  nb_train_obs: int,
                  test_ds: tf.data.Dataset,
                  nb_test_obs: int,
+                 lookups: Dict[str, tf.keras.layers.StringLookup],
                  all_articles: tf.Tensor,
-                 label_probs: tf.lookup.StaticHashTable,
-                 article_vocab_size: int,
-                 customer_vocab_size: int,
+                 label_probs_hash_table: tf.lookup.StaticHashTable,
                  full_article_probs: tf.Tensor):
         self.train_ds = train_ds
         self.nb_train_obs = nb_train_obs
         self.test_ds = test_ds
         self.nb_test_obs = nb_test_obs
+        self.lookups = lookups
         self.all_articles = all_articles
-        self.label_probs = label_probs
-        self.article_vocab_size = article_vocab_size
-        self.customer_vocab_size = customer_vocab_size
+        self.label_probs_hash_table = label_probs_hash_table
         self.full_article_probs = full_article_probs
 
 
@@ -35,16 +34,12 @@ def split_data(transactions_df):
 
 
 def perform_string_lookups(inputs: Dict[str, tf.Tensor],
-                           article_lookup: tf.keras.layers.StringLookup,
-                           customer_lookup: tf.keras.layers.StringLookup) -> Dict[str, tf.Tensor]:
-    return {
-        'article_id': article_lookup(inputs['article_id']),
-        'customer_id': customer_lookup(inputs['customer_id'])
-    }
+                           lookups: Dict[str, tf.keras.layers.StringLookup]) -> Dict[str, tf.Tensor]:
+    return {key: lkp(inputs[key]) for key, lkp in lookups.items()}
 
 
-def get_label_probs(train_df: pd.DataFrame,
-                    article_lookup: tf.keras.layers.StringLookup) -> tf.lookup.StaticHashTable:
+def get_label_probs_hash_table(train_df: pd.DataFrame,
+                               article_lookup: tf.keras.layers.StringLookup) -> tf.lookup.StaticHashTable:
     article_counts_dict = train_df.groupby('article_id')['article_id'].count().to_dict()
     nb_transactions = train_df.shape[0]
     keys = list(article_counts_dict.keys())
@@ -58,44 +53,74 @@ def get_label_probs(train_df: pd.DataFrame,
                                      default_value=0.0)
 
 
+def build_lookups(train_df) -> Dict[str, tf.keras.layers.StringLookup]:
+    lookups = {}
+    for categ_variable in Variables.ALL_CATEG_VARIABLES:
+        unique_values = train_df[categ_variable].unique()
+        lookups[categ_variable] = tf.keras.layers.StringLookup(vocabulary=unique_values)
+    return lookups
+
+
+def create_age_interval(x):
+    if x <= 25:
+        return '[16, 25]'
+    if x <= 35:
+        return '[26, 35]'
+    if x <= 45:
+        return '[36, 45]'
+    if x <= 55:
+        return '[46, 55]'
+    if x <= 65:
+        return '[56, 65]'
+    return '[66, 99]'
+
+
+def preprocess_customer_data(customer_df):
+    customer_df["FN"].fillna("UNKNOWN", inplace=True)
+    customer_df["Active"].fillna("UNKNOWN", inplace=True)
+
+    # Set unknown the club member status & news frequency
+    customer_df["club_member_status"].fillna("UNKNOWN", inplace=True)
+
+    customer_df["fashion_news_frequency"] = customer_df["fashion_news_frequency"].replace({"None": "NONE"})
+    customer_df["fashion_news_frequency"].fillna("UNKNOWN", inplace=True)
+
+    # Set missing values in age with the median
+    customer_df["age"].fillna(customer_df["age"].median(), inplace=True)
+    customer_df["age_interval"] = customer_df["age"].apply(lambda x: create_age_interval(x))
+
+
 def preprocess(data: HmData, batch_size) -> PreprocessedHmData:
-    train_df, test_df = split_data(data.transactions_df)
+    preprocess_customer_data(data.customer_df)
+    transactions_enhanced_df = data.transactions_df.merge(data.customer_df, on='customer_id')
+    transactions_enhanced_df = transactions_enhanced_df.merge(data.article_df, on='article_id')
+
+    train_df, test_df = split_data(transactions_enhanced_df)
     nb_train_obs = train_df.shape[0]
     nb_test_obs = test_df.shape[0]
 
-    unique_article_ids = train_df.article_id.unique()
-    article_lookup = tf.keras.layers.StringLookup(vocabulary=unique_article_ids)
-    article_vocab_size = len(unique_article_ids) + 1
-    print(f'article vocab size = {article_vocab_size}')
+    lookups = build_lookups(train_df)
 
-    unique_customer_ids = train_df.customer_id.unique()
-    customer_lookup = tf.keras.layers.StringLookup(vocabulary=unique_customer_ids)
-    customer_vocab_size = len(unique_customer_ids) + 1
-    print(f'customer vocab size = {article_vocab_size}')
-
-    train_ds = tf.data.Dataset.from_tensor_slices(dict(train_df[['customer_id', 'article_id']])) \
+    train_ds = tf.data.Dataset.from_tensor_slices(dict(train_df[Variables.ALL_CATEG_VARIABLES])) \
         .shuffle(100_000) \
         .batch(batch_size) \
-        .map(lambda inputs: perform_string_lookups(inputs, article_lookup, customer_lookup)) \
+        .map(lambda inputs: perform_string_lookups(inputs, lookups)) \
         .repeat()
-    test_ds = tf.data.Dataset.from_tensor_slices(dict(test_df[['customer_id', 'article_id']])) \
+    test_ds = tf.data.Dataset.from_tensor_slices(dict(test_df[Variables.ALL_CATEG_VARIABLES])) \
         .batch(batch_size) \
-        .map(lambda inputs: perform_string_lookups(inputs, article_lookup, customer_lookup)) \
+        .map(lambda inputs: perform_string_lookups(inputs, lookups)) \
         .repeat()
-    all_articles_with_oov = [article_lookup.oov_token] + list(article_lookup.input_vocabulary)
-    articles_ds = tf.data.Dataset.from_tensor_slices(all_articles_with_oov) \
-        .batch(article_vocab_size) \
-        .map(article_lookup)
-    all_articles = next(iter(articles_ds))
-    label_probs = get_label_probs(train_df, article_lookup)
-    full_article_probs = next(iter(articles_ds.map(lambda article_idx: label_probs.lookup(article_idx))))
+
+    article_lookup = lookups['article_id']
+    all_articles = article_lookup([article_lookup.oov_token] + list(article_lookup.input_vocabulary))
+    label_probs_hash_table = get_label_probs_hash_table(train_df, article_lookup)
+    full_article_probs = label_probs_hash_table.lookup(all_articles)
 
     return PreprocessedHmData(train_ds,
                               nb_train_obs,
                               test_ds,
                               nb_test_obs,
+                              lookups,
                               all_articles,
-                              label_probs,
-                              article_vocab_size,
-                              customer_vocab_size,
+                              label_probs_hash_table,
                               full_article_probs)
