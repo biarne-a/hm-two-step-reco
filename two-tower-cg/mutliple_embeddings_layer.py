@@ -6,6 +6,7 @@ from tensorflow import keras
 
 class MultipleEmbeddingsLayer(keras.layers.Layer):
     def __init__(self, lookups: Dict[str, tf.keras.layers.StringLookup]):
+        super().__init__()
         self._all_embeddings = {}
         for categ_variable in lookups.keys():
             lookup = lookups[categ_variable]
