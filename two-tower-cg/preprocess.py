@@ -2,7 +2,6 @@ import pandas as pd
 import tensorflow as tf
 from typing import Dict
 
-from load_data import HmData
 from config import Variables
 
 
@@ -24,13 +23,6 @@ class PreprocessedHmData:
         self.all_articles = all_articles
         self.label_probs_hash_table = label_probs_hash_table
         self.full_article_probs = full_article_probs
-
-
-def split_data(transactions_df):
-    trans_date = transactions_df['t_dat']
-    train_df = transactions_df[(trans_date >= '2019-09-20') & (trans_date <= '2020-08-20')]
-    test_df = transactions_df[trans_date >= '2020-08-20']
-    return train_df, test_df
 
 
 def perform_string_lookups(inputs: Dict[str, tf.Tensor],
@@ -61,47 +53,8 @@ def build_lookups(train_df) -> Dict[str, tf.keras.layers.StringLookup]:
     return lookups
 
 
-def create_age_interval(x):
-    if x <= 25:
-        return '[16, 25]'
-    if x <= 35:
-        return '[26, 35]'
-    if x <= 45:
-        return '[36, 45]'
-    if x <= 55:
-        return '[46, 55]'
-    if x <= 65:
-        return '[56, 65]'
-    return '[66, 99]'
 
-
-def preprocess_customer_data(customer_df):
-    customer_df["FN"].fillna("UNKNOWN", inplace=True)
-    customer_df["Active"].fillna("UNKNOWN", inplace=True)
-
-    # Set unknown the club member status & news frequency
-    customer_df["club_member_status"].fillna("UNKNOWN", inplace=True)
-
-    customer_df["fashion_news_frequency"] = customer_df["fashion_news_frequency"].replace({"None": "NONE"})
-    customer_df["fashion_news_frequency"].fillna("UNKNOWN", inplace=True)
-
-    # Set missing values in age with the median
-    customer_df["age"].fillna(customer_df["age"].median(), inplace=True)
-    customer_df["age_interval"] = customer_df["age"].apply(lambda x: create_age_interval(x))
-
-
-def preprocess(data: HmData, batch_size) -> PreprocessedHmData:
-    preprocess_customer_data(data.customer_df)
-    minimal_trans_df = data.transactions_df[['article_id', 'customer_id', 't_dat']]
-    minimal_cust_df = data.customer_df[Variables.CUSTOMER_CATEG_VARIABLES]
-    minimal_art_df = data.article_df[Variables.ARTICLE_CATEG_VARIABLES]
-    transactions_enhanced_df = minimal_trans_df.merge(minimal_cust_df, on='customer_id')
-    transactions_enhanced_df = transactions_enhanced_df.merge(minimal_art_df, on='article_id')
-
-    for categ_variable in Variables.ALL_CATEG_VARIABLES:
-        transactions_enhanced_df[categ_variable] = transactions_enhanced_df[categ_variable].astype(str)
-
-    train_df, test_df = split_data(transactions_enhanced_df)
+def preprocess(train_df, test_df, batch_size) -> PreprocessedHmData:
     nb_train_obs = train_df.shape[0]
     nb_test_obs = test_df.shape[0]
 
