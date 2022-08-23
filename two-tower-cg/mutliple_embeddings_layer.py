@@ -5,7 +5,9 @@ from tensorflow import keras
 
 
 class MultipleEmbeddingsLayer(keras.layers.Layer):
-    def __init__(self, lookups: Dict[str, tf.keras.layers.StringLookup]):
+    def __init__(self,
+                lookups: Dict[str, tf.keras.layers.StringLookup],
+                embedding_dimension: int):
         super().__init__()
         self._all_embeddings = {}
         for categ_variable in lookups.keys():
@@ -15,9 +17,14 @@ class MultipleEmbeddingsLayer(keras.layers.Layer):
             embedding_layer = tf.keras.layers.Embedding(vocab_size, cat_var_emb_dim)
             self._all_embeddings[categ_variable] = embedding_layer
 
+        self._dense1 = tf.keras.layers.Dense(256, activation='relu'),
+        self._dense2 = tf.keras.layers.Dense(embedding_dimension, activation='relu')
+
     def call(self, inputs):
         all_embeddings = []
         for variable, embedding_layer in self._all_embeddings.items():
             embeddings = embedding_layer(inputs[variable])
             all_embeddings.append(embeddings)
-        return tf.concat(all_embeddings, axis=1)
+        all_embeddings = tf.concat(all_embeddings, axis=1)
+        outputs = self._dense1(all_embeddings)
+        return self._dense2(outputs)

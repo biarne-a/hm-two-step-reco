@@ -19,11 +19,12 @@ def build_tower_sub_model(vocab_size: int, embedding_dimension: int) -> tf.keras
 
 def build_complex_sub_model(lookups: Dict[str, tf.keras.layers.StringLookup],
                             embedding_dimension: int):
-    return tf.keras.Sequential([
-        MultipleEmbeddingsLayer(lookups),
-        tf.keras.layers.Dense(256, activation='relu'),
-        tf.keras.layers.Dense(embedding_dimension, activation='relu')
-    ])
+    # return tf.keras.Sequential([
+    #     MultipleEmbeddingsLayer(lookups, embedding_dimension),
+    #     tf.keras.layers.Dense(256, activation='relu'),
+    #     tf.keras.layers.Dense(embedding_dimension, activation='relu')
+    # ])
+    return MultipleEmbeddingsLayer(lookups, embedding_dimension)
 
 
 def get_callbacks():
