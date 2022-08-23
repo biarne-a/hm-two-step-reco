@@ -53,7 +53,6 @@ def build_lookups(train_df) -> Dict[str, tf.keras.layers.StringLookup]:
     return lookups
 
 
-
 def preprocess(train_df, test_df, batch_size) -> PreprocessedHmData:
     nb_train_obs = train_df.shape[0]
     nb_test_obs = test_df.shape[0]

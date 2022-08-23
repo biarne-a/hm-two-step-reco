@@ -18,10 +18,10 @@ class Basic2TowerModel(keras.models.Model):
                                                    full_article_probs=data.full_article_probs)
 
     def call(self, inputs, training=False):
-        customer_embeddings = self._customer_model(inputs["customer_id"])
+        customer_embeddings = self._customer_model(inputs)
 
         if training:
-            article_embeddings = self._article_model(inputs['article_id'])
+            article_embeddings = self._article_model(inputs)
         else:
             article_embeddings = self._article_model(self._all_articles)
 
