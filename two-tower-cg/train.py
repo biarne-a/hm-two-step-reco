@@ -5,8 +5,8 @@ from tensorflow import keras
 from config import Config, Variables
 from custom_recall import CustomRecall
 from preprocess import PreprocessedHmData
+from single_tower_model import SingleTowerModel
 from basic_2_tower_model import Basic2TowerModel
-from mutliple_embeddings_layer import MultipleEmbeddingsLayer
 
 
 def build_tower_sub_model(vocab_size: int, embedding_dimension: int) -> tf.keras.Model:
@@ -17,16 +17,6 @@ def build_tower_sub_model(vocab_size: int, embedding_dimension: int) -> tf.keras
     ])
 
 
-def build_complex_sub_model(lookups: Dict[str, tf.keras.layers.StringLookup],
-                            embedding_dimension: int):
-    # return tf.keras.Sequential([
-    #     MultipleEmbeddingsLayer(lookups, embedding_dimension),
-    #     tf.keras.layers.Dense(256, activation='relu'),
-    #     tf.keras.layers.Dense(embedding_dimension, activation='relu')
-    # ])
-    return MultipleEmbeddingsLayer(lookups, embedding_dimension)
-
-
 def get_callbacks():
     return [keras.callbacks.TensorBoard(log_dir='logs', update_freq=100)]
 
@@ -34,9 +24,9 @@ def get_callbacks():
 def run_training(data: PreprocessedHmData,
                  config: Config):
     article_lookups = {key: lkp for key, lkp in data.lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
-    article_model = build_complex_sub_model(article_lookups, config.embedding_dimension)
+    article_model = SingleTowerModel(article_lookups, config.embedding_dimension)
     customer_lookups = {key: lkp for key, lkp in data.lookups.items() if key in Variables.CUSTOMER_CATEG_VARIABLES}
-    customer_model = build_complex_sub_model(customer_lookups, config.embedding_dimension)
+    customer_model = SingleTowerModel(customer_lookups, config.embedding_dimension)
 
     model = Basic2TowerModel(customer_model, article_model, data)
     model.compile(optimizer=tf.keras.optimizers.Adagrad(learning_rate=config.learning_rate),
@@ -45,10 +35,8 @@ def run_training(data: PreprocessedHmData,
 
     return model.fit(x=data.train_ds,
                      epochs=config.nb_epochs,
-                     # steps_per_epoch=data.nb_train_obs // config.batch_size,
-                     steps_per_epoch=3,
+                     steps_per_epoch=data.nb_train_obs // config.batch_size,
                      validation_data=data.test_ds,
-                     # validation_steps=data.nb_test_obs // config.batch_size,
-                     validation_steps=3,
+                     validation_steps=data.nb_test_obs // config.batch_size,
                      callbacks=get_callbacks(),
                      verbose=1)
