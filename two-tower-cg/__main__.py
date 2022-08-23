@@ -6,10 +6,10 @@ from config import Config
 
 def run_all(config: Config):
     # Extract
-    train_df, test_df = load_data()
+    train_df, test_df, article_df = load_data()
 
     # Preprocess
-    preprocessed_hm_data = preprocess(train_df, test_df, batch_size=config.batch_size)
+    preprocessed_hm_data = preprocess(train_df, test_df, article_df, batch_size=config.batch_size)
 
     # Train
     return run_training(preprocessed_hm_data, config)

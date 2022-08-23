@@ -42,11 +42,15 @@ def split_data(transactions_df):
     return train_df, test_df
 
 
-def load_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
+def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    article_df = pd.read_csv("hmdata/articles.csv.zip")
+    for categ_variable in Variables.ARTICLE_CATEG_VARIABLES:
+        article_df[categ_variable] = article_df[categ_variable].astype(str)
+
     if os.path.exists('train_df.p') and os.path.exists('test_df.p'):
         train_df = pickle.load(open('train_df.p', 'rb'))
         test_df = pickle.load(open('test_df.p', 'rb'))
-        return train_df, test_df
+        return train_df.iloc[:10000], test_df[:10000], article_df
 
     article_df = pd.read_csv("hmdata/articles.csv.zip")
     customer_df = pd.read_csv("hmdata/customers.csv.zip")
@@ -68,4 +72,4 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     pickle.dump(train_df, open('train_df.p', 'wb'))
     pickle.dump(test_df, open('test_df.p', 'wb'))
 
-    return train_df, test_df
+    return train_df, test_df, article_df

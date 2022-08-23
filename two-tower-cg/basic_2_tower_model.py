@@ -44,7 +44,8 @@ class Basic2TowerModel(keras.models.Model):
         loss_val = self._custom_loss(inputs['article_id'], logits, training=False)
 
         # Compute metrics
-        top_indices = tf.math.top_k(logits, k=1000).indices
+        # We add one to the output indices because everything is shifted because of the OOV token
+        top_indices = tf.math.top_k(logits, k=1000).indices + 1
         metric_results = self.compute_metrics(x=None, y=inputs['article_id'], y_pred=top_indices, sample_weight=None)
 
         return {'loss': loss_val, **metric_results}

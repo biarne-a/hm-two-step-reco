@@ -12,7 +12,7 @@ class PreprocessedHmData:
                  test_ds: tf.data.Dataset,
                  nb_test_obs: int,
                  lookups: Dict[str, tf.keras.layers.StringLookup],
-                 all_articles: tf.Tensor,
+                 all_articles: Dict[str, tf.Tensor],
                  label_probs_hash_table: tf.lookup.StaticHashTable,
                  full_article_probs: tf.Tensor):
         self.train_ds = train_ds
@@ -53,7 +53,7 @@ def build_lookups(train_df) -> Dict[str, tf.keras.layers.StringLookup]:
     return lookups
 
 
-def preprocess(train_df, test_df, batch_size) -> PreprocessedHmData:
+def preprocess(train_df, test_df, article_df, batch_size) -> PreprocessedHmData:
     nb_train_obs = train_df.shape[0]
     nb_test_obs = test_df.shape[0]
 
@@ -68,11 +68,16 @@ def preprocess(train_df, test_df, batch_size) -> PreprocessedHmData:
         .batch(batch_size) \
         .map(lambda inputs: perform_string_lookups(inputs, lookups)) \
         .repeat()
+    article_lookups = {key: lkp for key, lkp in lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
+    article_ds = tf.data.Dataset.from_tensor_slices(dict(article_df[Variables.ARTICLE_CATEG_VARIABLES])) \
+        .batch(len(article_df)) \
+        .map(lambda inputs: perform_string_lookups(inputs, article_lookups))
+    all_articles = next(iter(article_ds))
 
     article_lookup = lookups['article_id']
-    all_articles = article_lookup([article_lookup.oov_token] + list(article_lookup.input_vocabulary))
+    all_article_ids = article_lookup([article_lookup.oov_token] + list(article_lookup.input_vocabulary))
     label_probs_hash_table = get_label_probs_hash_table(train_df, article_lookup)
-    full_article_probs = label_probs_hash_table.lookup(all_articles)
+    full_article_probs = label_probs_hash_table.lookup(all_article_ids)
 
     return PreprocessedHmData(train_ds,
                               nb_train_obs,

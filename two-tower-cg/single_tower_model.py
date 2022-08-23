@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 
-class MultipleEmbeddingsLayer(keras.layers.Layer):
+class SingleTowerModel(keras.models.Model):
     def __init__(self,
                 lookups: Dict[str, tf.keras.layers.StringLookup],
                 embedding_dimension: int):
@@ -17,7 +17,7 @@ class MultipleEmbeddingsLayer(keras.layers.Layer):
             embedding_layer = tf.keras.layers.Embedding(vocab_size, cat_var_emb_dim)
             self._all_embeddings[categ_variable] = embedding_layer
 
-        self._dense1 = tf.keras.layers.Dense(256, activation='relu'),
+        self._dense1 = tf.keras.layers.Dense(256, activation='relu')
         self._dense2 = tf.keras.layers.Dense(embedding_dimension, activation='relu')
 
     def call(self, inputs):
