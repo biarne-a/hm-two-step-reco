@@ -58,17 +58,17 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     # article_df['article_id'] = article_df['article_id'].astype(str)
     transactions_df['article_id'] = transactions_df['article_id'].astype(str)
 
-    # preprocess_customer_data(customer_df)
-    # minimal_trans_df = transactions_df[['article_id', 'customer_id', 't_dat']]
-    # minimal_cust_df = customer_df[Variables.CUSTOMER_CATEG_VARIABLES]
-    # minimal_art_df = article_df[Variables.ARTICLE_CATEG_VARIABLES]
-    # transactions_enhanced_df = minimal_trans_df.merge(minimal_cust_df, on='customer_id')
-    # transactions_enhanced_df = transactions_enhanced_df.merge(minimal_art_df, on='article_id')
-    #
-    # for categ_variable in Variables.ALL_CATEG_VARIABLES:
-    #     transactions_enhanced_df[categ_variable] = transactions_enhanced_df[categ_variable].astype(str)
+    preprocess_customer_data(customer_df)
+    minimal_trans_df = transactions_df[['article_id', 'customer_id', 't_dat']]
+    minimal_cust_df = customer_df[Variables.CUSTOMER_CATEG_VARIABLES]
+    minimal_art_df = article_df[Variables.ARTICLE_CATEG_VARIABLES]
+    transactions_enhanced_df = minimal_trans_df.merge(minimal_cust_df, on='customer_id')
+    transactions_enhanced_df = transactions_enhanced_df.merge(minimal_art_df, on='article_id')
 
-    train_df, test_df = split_data(transactions_df)
+    for categ_variable in Variables.ALL_CATEG_VARIABLES:
+        transactions_enhanced_df[categ_variable] = transactions_enhanced_df[categ_variable].astype(str)
+
+    train_df, test_df = split_data(transactions_enhanced_df)
     pickle.dump(train_df, open('train_df.p', 'wb'))
     pickle.dump(test_df, open('test_df.p', 'wb'))
 
