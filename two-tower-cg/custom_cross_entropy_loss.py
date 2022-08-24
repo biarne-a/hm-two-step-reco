@@ -2,14 +2,11 @@ import tensorflow as tf
 
 
 class CustomCrossEntropyLoss:
-    def __init__(self,
-                 label_probs: tf.lookup.StaticHashTable = None,
-                 full_article_probs: tf.Tensor = None):
+    def __init__(self, label_probs: tf.lookup.StaticHashTable):
         self._label_probs = label_probs
-        self._full_article_probs = full_article_probs
 
     def __call__(self, true_labels, logits, training):
-        batch_size, nb_candidates = tf.shape(logits)
+        batch_size = tf.shape(logits)[0]
 
         if training:
             # Apply log q correction

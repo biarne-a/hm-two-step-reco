@@ -2,8 +2,6 @@ import pandas as pd
 import tensorflow as tf
 from typing import Dict
 
-from load_data import HmData
-
 
 class PreprocessedHmData:
     def __init__(self,
@@ -14,8 +12,7 @@ class PreprocessedHmData:
                  all_articles: tf.Tensor,
                  label_probs: tf.lookup.StaticHashTable,
                  article_vocab_size: int,
-                 customer_vocab_size: int,
-                 full_article_probs: tf.Tensor):
+                 customer_vocab_size: int):
         self.train_ds = train_ds
         self.nb_train_obs = nb_train_obs
         self.test_ds = test_ds
@@ -24,7 +21,6 @@ class PreprocessedHmData:
         self.label_probs = label_probs
         self.article_vocab_size = article_vocab_size
         self.customer_vocab_size = customer_vocab_size
-        self.full_article_probs = full_article_probs
 
 
 def split_data(transactions_df):
@@ -58,8 +54,8 @@ def get_label_probs(train_df: pd.DataFrame,
                                      default_value=0.0)
 
 
-def preprocess(data: HmData, batch_size) -> PreprocessedHmData:
-    train_df, test_df = split_data(data.transactions_df)
+def preprocess(train_df: pd.DataFrame, test_df: pd.DataFrame, article_df: pd.DataFrame, batch_size: int) -> PreprocessedHmData:
+    # train_df, test_df = split_data(data.transactions_df)
     nb_train_obs = train_df.shape[0]
     nb_test_obs = test_df.shape[0]
 
@@ -88,7 +84,6 @@ def preprocess(data: HmData, batch_size) -> PreprocessedHmData:
         .map(article_lookup)
     all_articles = next(iter(articles_ds))
     label_probs = get_label_probs(train_df, article_lookup)
-    full_article_probs = next(iter(articles_ds.map(lambda article_idx: label_probs.lookup(article_idx))))
 
     return PreprocessedHmData(train_ds,
                               nb_train_obs,
@@ -97,5 +92,4 @@ def preprocess(data: HmData, batch_size) -> PreprocessedHmData:
                               all_articles,
                               label_probs,
                               article_vocab_size,
-                              customer_vocab_size,
-                              full_article_probs)
+                              customer_vocab_size)

@@ -14,8 +14,7 @@ class Basic2TowerModel(keras.models.Model):
         self._article_model = article_model
         self._customer_model = customer_model
         self._all_articles = data.all_articles
-        self._custom_loss = CustomCrossEntropyLoss(label_probs=data.label_probs,
-                                                   full_article_probs=data.full_article_probs)
+        self._custom_loss = CustomCrossEntropyLoss(label_probs=data.label_probs)
 
     def call(self, inputs, training=False):
         customer_embeddings = self._customer_model(inputs["customer_id"])
