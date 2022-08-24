@@ -84,10 +84,12 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     minimal_art_df = article_df[Variables.ARTICLE_CATEG_VARIABLES]
     cust_data = minimal_cust_df.set_index('customer_id').to_dict('index')
     art_data = minimal_art_df.set_index('article_id').to_dict('index')
-    for var in Variables.CUSTOMER_CATEG_VARIABLES:
-        transactions_df[var] = transactions_df['customer_id'].apply(lambda _id: cust_data[_id][var])
-    for var in Variables.ARTICLE_CATEG_VARIABLES:
-        transactions_df[var] = transactions_df['article_id'].apply(lambda _id: art_data[_id][var])
+    for cat_var in Variables.CUSTOMER_CATEG_VARIABLES:
+        if cat_var != 'customer_id':
+            transactions_df[cat_var] = transactions_df['customer_id'].apply(lambda _id: cust_data[_id][cat_var])
+    for cat_var in Variables.ARTICLE_CATEG_VARIABLES:
+        if cat_var != 'article_id':
+            transactions_df[cat_var] = transactions_df['article_id'].apply(lambda _id: art_data[_id][cat_var])
 
     # enriched_transactions = minimal_trans_df.apply(lambda row: enrich_transactions(row, cust_data, art_data), axis=1)
     # enriched_trans_df = pd.DataFrame.from_records(list(enriched_transactions))
