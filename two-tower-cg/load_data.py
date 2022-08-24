@@ -69,6 +69,10 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         transactions_enhanced_df[categ_variable] = transactions_enhanced_df[categ_variable].astype(str)
 
     train_df, test_df = split_data(transactions_enhanced_df)
+    pickle.dump(train_df, open('train_df_enhanced.p', 'wb'))
+    pickle.dump(test_df, open('test_df_enhanced.p', 'wb'))
+
+    train_df, test_df = split_data(transactions_df)
     pickle.dump(train_df, open('train_df.p', 'wb'))
     pickle.dump(test_df, open('test_df.p', 'wb'))
 

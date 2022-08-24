@@ -67,7 +67,7 @@ def preprocess(train_df: pd.DataFrame, test_df: pd.DataFrame, article_df: pd.Dat
     unique_customer_ids = train_df.customer_id.unique()
     customer_lookup = tf.keras.layers.StringLookup(vocabulary=unique_customer_ids)
     customer_vocab_size = len(unique_customer_ids) + 1
-    print(f'customer vocab size = {article_vocab_size}')
+    print(f'customer vocab size = {customer_vocab_size}')
 
     train_ds = tf.data.Dataset.from_tensor_slices(dict(train_df[['customer_id', 'article_id']])) \
         .shuffle(100_000) \
