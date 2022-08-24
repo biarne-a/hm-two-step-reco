@@ -53,10 +53,15 @@ def build_lookups(train_df) -> Dict[str, tf.keras.layers.StringLookup]:
 
 def build_article_record(article_id: str,
                          articles_metadata: Dict[str, Dict[str, str]]):
-    data = articles_metadata[article_id]
     record = {
         'article_id': article_id
     }
+    if article_id == 'UNK':
+        for categ_variable in Variables.ARTICLE_CATEG_VARIABLES:
+            record[categ_variable] = 'UNK'
+        return record
+
+    data = articles_metadata[article_id]
     for categ_variable in Variables.ARTICLE_CATEG_VARIABLES:
         if categ_variable == 'article_id':
             continue
@@ -65,7 +70,7 @@ def build_article_record(article_id: str,
 
 
 def build_train_article_df(train_df: pd.DataFrame, article_df: pd.DataFrame) -> pd.DataFrame:
-    unique_article_ids = train_df.article_id.unique()
+    unique_article_ids = ['UNK'] + list(train_df.article_id.unique())
     articles_metadata = build_articles_metadata(article_df)
     articles_records = [build_article_record(article_id, articles_metadata) for article_id in unique_article_ids]
     return pd.DataFrame.from_records(articles_records)
