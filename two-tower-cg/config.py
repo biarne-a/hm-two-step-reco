@@ -22,10 +22,8 @@ class Config:
 
 
 class Variables:
-    # ARTICLE_CATEG_VARIABLES: List[str] = ['article_id', 'product_type_name', 'product_group_name', 'colour_group_name',
-    #                                       'department_name', 'index_name', 'section_name', 'garment_group_name']
-    # CUSTOMER_CATEG_VARIABLES: List[str] = ['customer_id', 'FN', 'Active', 'club_member_status',
-    #                                        'fashion_news_frequency', 'age_interval', 'postal_code']
-    ARTICLE_CATEG_VARIABLES: List[str] = ['article_id']
-    CUSTOMER_CATEG_VARIABLES: List[str] = ['customer_id']
+    ARTICLE_CATEG_VARIABLES: List[str] = ['article_id', 'product_type_name', 'product_group_name', 'colour_group_name',
+                                          'department_name', 'index_name', 'section_name', 'garment_group_name']
+    CUSTOMER_CATEG_VARIABLES: List[str] = ['customer_id', 'FN', 'Active', 'club_member_status',
+                                           'fashion_news_frequency', 'age_interval', 'postal_code']
     ALL_CATEG_VARIABLES: List[str] = ARTICLE_CATEG_VARIABLES + CUSTOMER_CATEG_VARIABLES

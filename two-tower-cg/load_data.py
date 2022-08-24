@@ -91,9 +91,6 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         if cat_var != 'article_id':
             transactions_df[cat_var] = transactions_df['article_id'].apply(lambda _id: art_data[_id][cat_var])
 
-    # enriched_transactions = minimal_trans_df.apply(lambda row: enrich_transactions(row, cust_data, art_data), axis=1)
-    # enriched_trans_df = pd.DataFrame.from_records(list(enriched_transactions))
-
     train_df, test_df = split_data(transactions_df)
     pickle.dump(train_df, open('train_df.p', 'wb'))
     pickle.dump(test_df, open('test_df.p', 'wb'))

@@ -56,11 +56,6 @@ def build_article_record(article_id: str,
     record = {
         'article_id': article_id
     }
-    if article_id == 'UNK':
-        for categ_variable in Variables.ARTICLE_CATEG_VARIABLES:
-            record[categ_variable] = 'UNK'
-        return record
-
     data = articles_metadata[article_id]
     for categ_variable in Variables.ARTICLE_CATEG_VARIABLES:
         if categ_variable == 'article_id':
@@ -69,10 +64,11 @@ def build_article_record(article_id: str,
     return record
 
 
-def build_train_article_df(train_df: pd.DataFrame, article_df: pd.DataFrame) -> pd.DataFrame:
-    unique_article_ids = ['UNK'] + list(train_df.article_id.unique())
+def build_train_article_df(article_df: pd.DataFrame,
+                           article_lookup: tf.keras.layers.StringLookup) -> pd.DataFrame:
+    all_articles = list(article_lookup.input_vocabulary)
     articles_metadata = build_articles_metadata(article_df)
-    articles_records = [build_article_record(article_id, articles_metadata) for article_id in unique_article_ids]
+    articles_records = [build_article_record(article_id, articles_metadata) for article_id in all_articles]
     return pd.DataFrame.from_records(articles_records)
 
 
@@ -97,20 +93,21 @@ def preprocess(train_df, test_df, article_df, batch_size) -> PreprocessedHmData:
                              .repeat()
 
     article_lookup = lookups['article_id']
-    article_lookups = {key: lkp for key, lkp in lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
-    all_articles_with_oov = [article_lookup.oov_token] + list(article_lookup.input_vocabulary)
-    article_vocab_size = len(all_articles_with_oov)
-    articles_ds = tf.data.Dataset.from_tensor_slices({'article_id': all_articles_with_oov}) \
-        .batch(article_vocab_size) \
-        .map(lambda inputs: perform_string_lookups(inputs, article_lookups))
-    all_articles = next(iter(articles_ds))
 
-    # train_article_df = build_train_article_df(train_df, article_df)
     # article_lookups = {key: lkp for key, lkp in lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
-    # article_ds = tf.data.Dataset.from_tensor_slices(dict(train_article_df)) \
-    #                             .batch(len(train_article_df)) \
-    #                             .map(lambda inputs: perform_string_lookups(inputs, article_lookups))
-    # all_articles = next(iter(article_ds))
+    # all_articles_with_oov = [article_lookup.oov_token] + list(article_lookup.input_vocabulary)
+    # article_vocab_size = len(all_articles_with_oov)
+    # articles_ds = tf.data.Dataset.from_tensor_slices({'article_id': all_articles_with_oov}) \
+    #     .batch(article_vocab_size) \
+    #     .map(lambda inputs: perform_string_lookups(inputs, article_lookups))
+    # all_articles = next(iter(articles_ds))
+
+    train_article_df = build_train_article_df(train_df, article_df)
+    article_lookups = {key: lkp for key, lkp in lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
+    article_ds = tf.data.Dataset.from_tensor_slices(dict(train_article_df)) \
+                                .batch(len(train_article_df)) \
+                                .map(lambda inputs: perform_string_lookups(inputs, article_lookups))
+    all_articles = next(iter(article_ds))
 
     label_probs_hash_table = get_label_probs_hash_table(train_df, article_lookup)
 
