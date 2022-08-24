@@ -42,34 +42,54 @@ def split_data(transactions_df):
     return train_df, test_df
 
 
+def enrich_transactions(row, cust_data, art_data):
+    article_id = row['article_id']
+    customer_id = row['customer_id']
+    new_record = {
+        'article_id': article_id,
+        'customer_id': customer_id,
+        't_dat': row['t_dat']
+    }
+    for categ_variable in Variables.ARTICLE_CATEG_VARIABLES:
+        if categ_variable != 'article_id':
+            new_record[categ_variable] = str(art_data[article_id][categ_variable])
+    for categ_variable in Variables.CUSTOMER_CATEG_VARIABLES:
+        if categ_variable != 'customer_id':
+            new_record[categ_variable] = str(cust_data[customer_id][categ_variable])
+    return new_record
+
+
 def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    if os.path.exists('train_df.p') and os.path.exists('test_df.p') and os.path.exists('article_df.p'):
+        train_df = pickle.load(open('train_df.p', 'rb'))
+        test_df = pickle.load(open('test_df.p', 'rb'))
+        article_df = pickle.load(open('article_df.p', 'rb'))
+        return train_df, test_df, article_df
+
     article_df = pd.read_csv("hmdata/articles.csv.zip")
     for categ_variable in Variables.ARTICLE_CATEG_VARIABLES:
         article_df[categ_variable] = article_df[categ_variable].astype(str)
 
-    if os.path.exists('train_df.p') and os.path.exists('test_df.p'):
-        train_df = pickle.load(open('train_df.p', 'rb'))
-        test_df = pickle.load(open('test_df.p', 'rb'))
-        return train_df, test_df, article_df
-
-    article_df = pd.read_csv("hmdata/articles.csv.zip")
     customer_df = pd.read_csv("hmdata/customers.csv.zip")
-    transactions_df = pd.read_csv('hmdata/transactions_train.csv.zip')
-    article_df['article_id'] = article_df['article_id'].astype(str)
-    transactions_df['article_id'] = transactions_df['article_id'].astype(str)
-
     preprocess_customer_data(customer_df)
+    for categ_variable in Variables.CUSTOMER_CATEG_VARIABLES:
+        customer_df[categ_variable] = customer_df[categ_variable].astype(str)
+
+    transactions_df = pd.read_csv('hmdata/transactions_train.csv.zip')
+    transactions_df['article_id'] = transactions_df['article_id'].astype(str)
+    transactions_df['customer_id'] = transactions_df['customer_id'].astype(str)
+
     minimal_trans_df = transactions_df[['article_id', 'customer_id', 't_dat']]
     minimal_cust_df = customer_df[Variables.CUSTOMER_CATEG_VARIABLES]
     minimal_art_df = article_df[Variables.ARTICLE_CATEG_VARIABLES]
-    transactions_enhanced_df = minimal_trans_df.merge(minimal_cust_df, on='customer_id')
-    transactions_enhanced_df = transactions_enhanced_df.merge(minimal_art_df, on='article_id')
 
-    for categ_variable in Variables.ALL_CATEG_VARIABLES:
-        transactions_enhanced_df[categ_variable] = transactions_enhanced_df[categ_variable].astype(str)
+    cust_data = minimal_cust_df.set_index('customer_id').to_dict('index')
+    art_data = minimal_art_df.set_index('article_id').to_dict('index')
+    enriched_trans_df = minimal_trans_df.apply(lambda row: enrich_transactions(row, cust_data, art_data), axis=1)
 
-    train_df, test_df = split_data(transactions_enhanced_df)
+    train_df, test_df = split_data(enriched_trans_df)
     pickle.dump(train_df, open('train_df.p', 'wb'))
     pickle.dump(test_df, open('test_df.p', 'wb'))
+    pickle.dump(article_df, open('article_df.p', 'wb'))
 
     return train_df, test_df, article_df
