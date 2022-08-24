@@ -95,14 +95,22 @@ def preprocess(train_df, test_df, article_df, batch_size) -> PreprocessedHmData:
                              .batch(batch_size) \
                              .map(lambda inputs: perform_string_lookups(inputs, lookups)) \
                              .repeat()
-    train_article_df = build_train_article_df(train_df, article_df)
-    article_lookups = {key: lkp for key, lkp in lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
-    article_ds = tf.data.Dataset.from_tensor_slices(dict(train_article_df)) \
-                                .batch(len(train_article_df)) \
-                                .map(lambda inputs: perform_string_lookups(inputs, article_lookups))
-    all_articles = next(iter(article_ds))
 
     article_lookup = lookups['article_id']
+    all_articles_with_oov = [article_lookup.oov_token] + list(article_lookup.input_vocabulary)
+    article_vocab_size = len(all_articles_with_oov)
+    articles_ds = tf.data.Dataset.from_tensor_slices(all_articles_with_oov) \
+        .batch(article_vocab_size) \
+        .map(article_lookup)
+    all_articles = next(iter(articles_ds))
+
+    # train_article_df = build_train_article_df(train_df, article_df)
+    # article_lookups = {key: lkp for key, lkp in lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
+    # article_ds = tf.data.Dataset.from_tensor_slices(dict(train_article_df)) \
+    #                             .batch(len(train_article_df)) \
+    #                             .map(lambda inputs: perform_string_lookups(inputs, article_lookups))
+    # all_articles = next(iter(article_ds))
+
     label_probs_hash_table = get_label_probs_hash_table(train_df, article_lookup)
 
     return PreprocessedHmData(train_ds,
