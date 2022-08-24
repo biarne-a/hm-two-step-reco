@@ -13,7 +13,10 @@ class SingleTowerModel(keras.models.Model):
         for categ_variable in lookups.keys():
             lookup = lookups[categ_variable]
             vocab_size = len(lookup.input_vocabulary) + 1
-            cat_var_emb_dim = int(3 * math.log(vocab_size, 2))
+            if categ_variable == 'article_id' or categ_variable == 'customer_id':
+                cat_var_emb_dim = 128
+            else:
+                cat_var_emb_dim = int(3 * math.log(vocab_size, 2))
             embedding_layer = tf.keras.layers.Embedding(vocab_size, cat_var_emb_dim)
             self._all_embeddings[categ_variable] = embedding_layer
 
