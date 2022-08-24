@@ -102,7 +102,7 @@ def preprocess(train_df, test_df, article_df, batch_size) -> PreprocessedHmData:
     #     .map(lambda inputs: perform_string_lookups(inputs, article_lookups))
     # all_articles = next(iter(articles_ds))
 
-    train_article_df = build_train_article_df(train_df, article_df)
+    train_article_df = build_train_article_df(article_df, article_lookup)
     article_lookups = {key: lkp for key, lkp in lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
     article_ds = tf.data.Dataset.from_tensor_slices(dict(train_article_df)) \
                                 .batch(len(train_article_df)) \
