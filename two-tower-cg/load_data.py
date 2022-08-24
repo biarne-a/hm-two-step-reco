@@ -79,16 +79,20 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     transactions_df['article_id'] = transactions_df['article_id'].astype(str)
     transactions_df['customer_id'] = transactions_df['customer_id'].astype(str)
 
-    minimal_trans_df = transactions_df[['article_id', 'customer_id', 't_dat']]
+    transactions_df = transactions_df[['article_id', 'customer_id', 't_dat']]
     minimal_cust_df = customer_df[Variables.CUSTOMER_CATEG_VARIABLES]
     minimal_art_df = article_df[Variables.ARTICLE_CATEG_VARIABLES]
-
     cust_data = minimal_cust_df.set_index('customer_id').to_dict('index')
     art_data = minimal_art_df.set_index('article_id').to_dict('index')
-    enriched_transactions = minimal_trans_df.apply(lambda row: enrich_transactions(row, cust_data, art_data), axis=1)
-    enriched_trans_df = pd.DataFrame.from_records(list(enriched_transactions))
+    for var in Variables.CUSTOMER_CATEG_VARIABLES:
+        transactions_df[var] = transactions_df['customer_id'].apply(lambda _id: cust_data[_id][var], axis=1)
+    for var in Variables.ARTICLE_CATEG_VARIABLES:
+        transactions_df[var] = transactions_df['article_id'].apply(lambda _id: art_data[_id][var], axis=1)
 
-    train_df, test_df = split_data(enriched_trans_df)
+    # enriched_transactions = minimal_trans_df.apply(lambda row: enrich_transactions(row, cust_data, art_data), axis=1)
+    # enriched_trans_df = pd.DataFrame.from_records(list(enriched_transactions))
+
+    train_df, test_df = split_data(transactions_df)
     pickle.dump(train_df, open('train_df.p', 'wb'))
     pickle.dump(test_df, open('test_df.p', 'wb'))
     pickle.dump(article_df, open('article_df.p', 'wb'))
