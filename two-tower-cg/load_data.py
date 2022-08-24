@@ -35,10 +35,10 @@ def preprocess_customer_data(customer_df):
     customer_df["age_interval"] = customer_df["age"].apply(lambda x: create_age_interval(x))
 
 
-def split_data(transactions_df):
-    trans_date = transactions_df['t_dat']
-    train_df = transactions_df[(trans_date >= '2019-09-20') & (trans_date <= '2020-08-20')]
-    test_df = transactions_df[trans_date >= '2020-08-20']
+def split_data(df):
+    trans_date = df['t_dat']
+    train_df = df[(trans_date >= '2019-09-20') & (trans_date <= '2020-08-20')]
+    test_df = df[trans_date >= '2020-08-20']
     return train_df, test_df
 
 
@@ -85,7 +85,8 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
 
     cust_data = minimal_cust_df.set_index('customer_id').to_dict('index')
     art_data = minimal_art_df.set_index('article_id').to_dict('index')
-    enriched_trans_df = minimal_trans_df.apply(lambda row: enrich_transactions(row, cust_data, art_data), axis=1)
+    enriched_transactions = minimal_trans_df.apply(lambda row: enrich_transactions(row, cust_data, art_data), axis=1)
+    enriched_trans_df = pd.DataFrame.from_records(list(enriched_transactions))
 
     train_df, test_df = split_data(enriched_trans_df)
     pickle.dump(train_df, open('train_df.p', 'wb'))
