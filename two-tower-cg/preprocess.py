@@ -93,15 +93,6 @@ def preprocess(train_df, test_df, article_df, batch_size) -> PreprocessedHmData:
                              .repeat()
 
     article_lookup = lookups['article_id']
-
-    # article_lookups = {key: lkp for key, lkp in lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
-    # all_articles_with_oov = [article_lookup.oov_token] + list(article_lookup.input_vocabulary)
-    # article_vocab_size = len(all_articles_with_oov)
-    # articles_ds = tf.data.Dataset.from_tensor_slices({'article_id': all_articles_with_oov}) \
-    #     .batch(article_vocab_size) \
-    #     .map(lambda inputs: perform_string_lookups(inputs, article_lookups))
-    # all_articles = next(iter(articles_ds))
-
     train_article_df = build_train_article_df(article_df, article_lookup)
     article_lookups = {key: lkp for key, lkp in lookups.items() if key in Variables.ARTICLE_CATEG_VARIABLES}
     article_ds = tf.data.Dataset.from_tensor_slices(dict(train_article_df)) \

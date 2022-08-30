@@ -42,23 +42,6 @@ def split_data(df):
     return train_df, test_df
 
 
-def enrich_transactions(row, cust_data, art_data):
-    article_id = row['article_id']
-    customer_id = row['customer_id']
-    new_record = {
-        'article_id': article_id,
-        'customer_id': customer_id,
-        't_dat': row['t_dat']
-    }
-    for categ_variable in Variables.ARTICLE_CATEG_VARIABLES:
-        if categ_variable != 'article_id':
-            new_record[categ_variable] = str(art_data[article_id][categ_variable])
-    for categ_variable in Variables.CUSTOMER_CATEG_VARIABLES:
-        if categ_variable != 'customer_id':
-            new_record[categ_variable] = str(cust_data[customer_id][categ_variable])
-    return new_record
-
-
 def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if os.path.exists('train_df.p') and os.path.exists('test_df.p') and os.path.exists('article_df.p'):
         train_df = pickle.load(open('train_df.p', 'rb'))
