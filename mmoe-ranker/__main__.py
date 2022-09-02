@@ -1,3 +1,4 @@
+import pickle
 from load_data import load_data
 from preprocess import preprocess
 from config import Config
@@ -8,7 +9,8 @@ if __name__ == '__main__':
     config = Config(batch_size=512, learning_rate=0.1, nb_epochs=100)
     train_df, test_df, all_variables = load_data()
     data = preprocess(train_df, test_df, config.batch_size, all_variables)
-    run_training(data, config)
+    history = run_training(data, config)
+    pickle.dump(history.history, open('final_results.p', 'wb'))
 
     # import pickle
     #

@@ -189,7 +189,8 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
 
     print('Sampling negative transactions')
     train_df = augment_with_negative_examples(pos_train_df)
-    test_df = augment_with_negative_examples(pos_test_df)
+    # We don't create negative examples for the test set
+    test_df = pos_test_df
 
     print('Enrich training data')
     enrich_transactions(article_df, customer_df, train_df)
