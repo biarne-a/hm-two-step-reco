@@ -1,6 +1,7 @@
 import os
 import pickle
 import random
+import numpy as np
 import pandas as pd
 from typing import Tuple, List
 
@@ -39,7 +40,7 @@ def preprocess_customer_data(customer_df):
 def split_data(df):
     trans_date = df['t_dat']
     train_df = df[(trans_date >= '2019-09-20') & (trans_date <= '2020-08-20')]
-    test_df = df[trans_date >= '2020-08-20']
+    test_df = df[trans_date >= '2020-09-16']
     return train_df, test_df
 
 
@@ -136,10 +137,10 @@ def augment_with_negative_examples(pos_transactions_df):
 
 
 def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
-    if os.path.exists('train_df.p') and os.path.exists('test_df.p'):
+    if os.path.exists('train_small_df.p') and os.path.exists('test_small_df.p'):
         print('Loading existing train and test dataframes')
-        train_df = pickle.load(open('train_df.p', 'rb'))
-        test_df = pickle.load(open('test_df.p', 'rb'))
+        train_df = pickle.load(open('train_small_df.p', 'rb')).sample(frac=0.5)
+        test_df = pickle.load(open('test_small_df.p', 'rb')).sample(frac=0.5)
         customer_features = ['cust_nb_transactions', 'cust_nb_dates',
                              'cust_nb_article_id', 'cust_ratio_article_id',
                              'cust_nb_product_type_name', 'cust_ratio_product_type_name',
@@ -179,18 +180,29 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
     transactions_df['article_id'] = transactions_df['article_id'].astype(str)
     transactions_df['customer_id'] = transactions_df['customer_id'].astype(str)
 
-    transactions_df = transactions_df[['article_id', 'customer_id', 'price', 't_dat']]
-    transactions_df[Features.LABEL] = 1.0
-
-    print(f'Nb transactions: {len(transactions_df)}')
-
-    print('Splitting data')
-    pos_train_df, pos_test_df = split_data(transactions_df)
-
-    print('Sampling negative transactions')
-    train_df = augment_with_negative_examples(pos_train_df)
-    # We don't create negative examples for the test set
-    test_df = pos_test_df
+    # Positive samples
+    date_feat = transactions_df['t_dat']
+    last_week_transactions_df = transactions_df[date_feat >= '2020-09-16']
+    past_three_month_transactions_df = transactions_df[(date_feat >= '2020-06-16') & (date_feat < '2020-09-16')]
+    all_articles = set(past_three_month_transactions_df.article_id.unique())
+    observations = []
+    for customer_id, customer_transactions_df in last_week_transactions_df.groupby('customer_id'):
+        # Add positive observations
+        for i, row in customer_transactions_df.iterrows():
+            positive_obs = (customer_id, row['article_id'], 1.0)
+            observations.append(positive_obs)
+        # Add random negative observations
+        customer_articles = set(customer_transactions_df.article_id.unique())
+        available_negs = list(all_articles - customer_articles)
+        negatives = random.sample(available_negs, 300)
+        for neg_article_id in negatives:
+            positive_obs = (customer_id, neg_article_id, 0.0)
+            observations.append(positive_obs)
+    dataset_df = pd.DataFrame.from_records(observations, columns=['customer_id', 'article_id', Features.LABEL])
+    # We keep 1% for validation
+    dataset_df['is_train'] = np.random.random_sample(size=len(dataset_df)) > 0.01
+    train_df = dataset_df[dataset_df['is_train']]
+    test_df = dataset_df[~dataset_df['is_train']]
 
     print('Enrich training data')
     enrich_transactions(article_df, customer_df, train_df)
@@ -198,8 +210,7 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
     enrich_transactions(article_df, customer_df, test_df)
 
     print('Engineer new features')
-    pos_train_df = train_df[train_df[Features.LABEL] == 1.0]
-    customer_features, article_features = engineer_cross_features(pos_train_df)
+    customer_features, article_features = engineer_cross_features(transactions_df[date_feat < '2020-09-16'])
     train_df = merge_cross_features(customer_features, article_features, train_df)
     test_df = merge_cross_features(customer_features, article_features, test_df)
 

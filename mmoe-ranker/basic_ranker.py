@@ -31,9 +31,9 @@ class BasicRanker(keras.models.Model):
             embedded_var = embedding_layer(inputs[key])
             vars_to_concat.append(embedded_var)
         # Normalize numerical features
-        # for key, norm_layer in self._normalization_layers.items():
-        #     normalized_var = norm_layer(inputs[key])
-        #     vars_to_concat.append(tf.expand_dims(normalized_var, axis=1))
+        for key, norm_layer in self._normalization_layers.items():
+            normalized_var = norm_layer(inputs[key])
+            vars_to_concat.append(tf.expand_dims(normalized_var, axis=1))
         concatanated_vars = tf.concat(vars_to_concat, axis=1)
         outputs = concatanated_vars
         for dense in self._dense_layers:
