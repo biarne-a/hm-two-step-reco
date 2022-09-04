@@ -157,10 +157,10 @@ def build_dataset(all_articles, previous_week_transactions_df):
 
 
 def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
-    if os.path.exists('train_small_df.p') and os.path.exists('test_small_df.p'):
+    if os.path.exists('train_df.p') and os.path.exists('test_df.p'):
         print('Loading existing train and test dataframes')
-        train_df = pickle.load(open('train_small_df.p', 'rb')).sample(frac=0.5)
-        test_df = pickle.load(open('test_small_df.p', 'rb')).sample(frac=0.5)
+        train_df = pickle.load(open('train_df.p', 'rb'))
+        test_df = pickle.load(open('test_df.p', 'rb'))
         customer_features = ['cust_nb_transactions', 'cust_nb_dates',
                              'cust_nb_article_id', 'cust_ratio_article_id',
                              'cust_nb_product_type_name', 'cust_ratio_product_type_name',
