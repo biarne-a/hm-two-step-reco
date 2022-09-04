@@ -76,7 +76,7 @@ def enrich_transactions(article_df: pd.DataFrame,
             transactions_df[cat_var] = transactions_df['article_id'].apply(lambda _id: art_data[_id][cat_var])
 
 
-def engineer_cross_features(transac_df: pd.DataFrame):
+def engineer_customer_features(transac_df: pd.DataFrame):
     # Engineer features by customer
     customer_transactions = transac_df.groupby("customer_id", as_index=False)
     customer_features = customer_transactions.agg('size')
@@ -95,7 +95,10 @@ def engineer_cross_features(transac_df: pd.DataFrame):
         customer_features['cust_' + key + '_mean'] = customer_transactions[key].mean()[key]
         customer_features['cust_' + key + '_std'] = customer_transactions[key].std()[key]
         customer_features['cust_' + key + '_std'].fillna(0.0, inplace=True)
+    return customer_features
 
+
+def engineer_article_features(transac_df: pd.DataFrame):
     # Engineer features by article
     article_transactions = transac_df.groupby("article_id", as_index=False)
     article_features = article_transactions.agg('size')
@@ -115,7 +118,7 @@ def engineer_cross_features(transac_df: pd.DataFrame):
         article_features['art_' + key + '_std'] = article_transactions[key].std()[key]
         article_features['art_' + key + '_std'].fillna(0.0, inplace=True)
 
-    return customer_features, article_features
+    return article_features
 
 
 def merge_cross_features(customer_features: pd.DataFrame,
@@ -134,6 +137,23 @@ def augment_with_negative_examples(pos_transactions_df):
     all_transactions_df = pd.concat([pos_transactions_df, neg_transactions_df])
     # Shuffle positive and negative examples
     return all_transactions_df.sample(frac=1.0)
+
+
+def build_dataset(all_articles, previous_week_transactions_df):
+    observations = []
+    for customer_id, customer_transactions_df in previous_week_transactions_df.groupby('customer_id'):
+        # Add positive observations
+        for i, row in customer_transactions_df.iterrows():
+            positive_obs = (customer_id, row['article_id'], 1.0)
+            observations.append(positive_obs)
+        # Add random negative observations
+        customer_articles = set(customer_transactions_df.article_id.unique())
+        available_negs = list(all_articles - customer_articles)
+        negatives = random.sample(available_negs, 300)
+        for neg_article_id in negatives:
+            positive_obs = (customer_id, neg_article_id, 0.0)
+            observations.append(positive_obs)
+    return pd.DataFrame.from_records(observations, columns=['customer_id', 'article_id', Features.LABEL])
 
 
 def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
@@ -180,37 +200,21 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
     transactions_df['article_id'] = transactions_df['article_id'].astype(str)
     transactions_df['customer_id'] = transactions_df['customer_id'].astype(str)
 
-    # Positive samples
     date_feat = transactions_df['t_dat']
-    last_week_transactions_df = transactions_df[date_feat >= '2020-09-16']
-    past_three_month_transactions_df = transactions_df[(date_feat >= '2020-06-16') & (date_feat < '2020-09-16')]
-    all_articles = set(past_three_month_transactions_df.article_id.unique())
-    observations = []
-    for customer_id, customer_transactions_df in last_week_transactions_df.groupby('customer_id'):
-        # Add positive observations
-        for i, row in customer_transactions_df.iterrows():
-            positive_obs = (customer_id, row['article_id'], 1.0)
-            observations.append(positive_obs)
-        # Add random negative observations
-        customer_articles = set(customer_transactions_df.article_id.unique())
-        available_negs = list(all_articles - customer_articles)
-        negatives = random.sample(available_negs, 300)
-        for neg_article_id in negatives:
-            positive_obs = (customer_id, neg_article_id, 0.0)
-            observations.append(positive_obs)
-    dataset_df = pd.DataFrame.from_records(observations, columns=['customer_id', 'article_id', Features.LABEL])
-    # We keep 1% for validation
-    dataset_df['is_train'] = np.random.random_sample(size=len(dataset_df)) > 0.01
-    train_df = dataset_df[dataset_df['is_train']]
-    test_df = dataset_df[~dataset_df['is_train']]
+    print('Keep last 3 months of transactions only')
+    past_three_month_transactions_df = transactions_df[date_feat >= '2020-06-09']
+    print('Enrich transactions')
+    enrich_transactions(article_df, customer_df, past_three_month_transactions_df)
 
-    print('Enrich training data')
-    enrich_transactions(article_df, customer_df, train_df)
-    print('Enrich testing data')
-    enrich_transactions(article_df, customer_df, test_df)
+    last_week_transactions_df = past_three_month_transactions_df[date_feat >= '2020-09-16']
+    previous_week_transactions_df = past_three_month_transactions_df[(date_feat >= '2020-09-09') & (date_feat < '2020-09-16')]
+    all_articles = set(past_three_month_transactions_df.article_id.unique())
+    train_df = build_dataset(all_articles, previous_week_transactions_df)
+    test_df = build_dataset(all_articles, last_week_transactions_df).sample(n=200_000)
 
     print('Engineer new features')
-    customer_features, article_features = engineer_cross_features(transactions_df[date_feat < '2020-09-16'])
+    article_features = engineer_article_features(past_three_month_transactions_df)
+    customer_features = engineer_customer_features(past_three_month_transactions_df)
     train_df = merge_cross_features(customer_features, article_features, train_df)
     test_df = merge_cross_features(customer_features, article_features, test_df)
 
