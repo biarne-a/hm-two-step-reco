@@ -210,7 +210,9 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
     previous_week_transactions_df = past_three_month_transactions_df[(date_feat >= '2020-09-09') & (date_feat < '2020-09-16')]
     all_articles = set(past_three_month_transactions_df.article_id.unique())
     train_df = build_dataset(all_articles, previous_week_transactions_df).sample(n=8_000_000)
+    enrich_transactions(article_df, customer_df, train_df)
     test_df = build_dataset(all_articles, last_week_transactions_df).sample(n=200_000)
+    enrich_transactions(article_df, customer_df, test_df)
 
     print('Engineer new features')
     transactions_before_last_weeks_df = past_three_month_transactions_df[date_feat < '2020-09-16']
