@@ -15,11 +15,13 @@ def run_training(data: PreprocessedHmData, config: Config):
     # model.fit(x=data.train_ds, epochs=1, steps_per_epoch=1, verbose=1)
     # print(model.summary())
 
-    neg = 7906360
-    pos = 93640
-    total = neg + pos
-    weight_for_0 = (1 / neg) * (total / 2.0)
-    weight_for_1 = (1 / pos) * (total / 2.0)
+    # neg = 7906360
+    # pos = 93640
+    # total = neg + pos
+    # weight_for_0 = (1 / neg) * (total / 2.0)
+    # weight_for_1 = (1 / pos) * (total / 2.0)
+    weight_for_0 = 1
+    weight_for_1 = 10
 
     class_weight = {0: weight_for_0, 1: weight_for_1}
 
