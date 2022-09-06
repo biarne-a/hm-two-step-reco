@@ -12,23 +12,13 @@ def run_training(data: PreprocessedHmData, config: Config):
                   metrics=[tf.keras.metrics.AUC(curve='PR')],
                   run_eagerly=False)
 
-    # model.fit(x=data.train_ds, epochs=1, steps_per_epoch=1, verbose=1)
-    # print(model.summary())
-
-    # neg = 7906360
-    # pos = 93640
-    # total = neg + pos
-    # weight_for_0 = (1 / neg) * (total / 2.0)
-    # weight_for_1 = (1 / pos) * (total / 2.0)
-    weight_for_0 = 1
-    weight_for_1 = 10
-
+    weight_for_0 = 1.0
+    weight_for_1 = 10.0
     class_weight = {0: weight_for_0, 1: weight_for_1}
 
     return model.fit(x=data.train_ds,
                      epochs=config.nb_epochs,
-                     # steps_per_epoch=data.nb_train_obs // config.batch_size,
-                     steps_per_epoch=4000,
+                     steps_per_epoch=data.nb_train_obs // config.batch_size,
                      validation_data=data.test_ds,
                      validation_steps=data.nb_test_obs // config.batch_size,
                      class_weight=class_weight,

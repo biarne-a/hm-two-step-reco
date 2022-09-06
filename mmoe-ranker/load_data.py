@@ -3,7 +3,7 @@ import pickle
 import random
 import numpy as np
 import pandas as pd
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 
 from features import Features
 
@@ -64,16 +64,8 @@ def create_negative_transactions(transactions_df: pd.DataFrame,
 def enrich_transactions(article_df: pd.DataFrame,
                         customer_df: pd.DataFrame,
                         transactions_df: pd.DataFrame):
-    minimal_cust_df = customer_df[Features.CUSTOMER_FEATURES]
-    minimal_art_df = article_df[Features.ARTICLE_FEATURES]
-    cust_data = minimal_cust_df.set_index('customer_id').to_dict('index')
-    art_data = minimal_art_df.set_index('article_id').to_dict('index')
-    for cat_var in Features.CUSTOMER_FEATURES:
-        if cat_var != 'customer_id':
-            transactions_df[cat_var] = transactions_df['customer_id'].apply(lambda _id: cust_data[_id][cat_var])
-    for cat_var in Features.ARTICLE_FEATURES:
-        if cat_var != 'article_id':
-            transactions_df[cat_var] = transactions_df['article_id'].apply(lambda _id: art_data[_id][cat_var])
+    result_df = transactions_df.merge(customer_df, on='customer_id')
+    return result_df.merge(article_df, on='article_id')
 
 
 def engineer_customer_features(transac_df: pd.DataFrame):
@@ -95,6 +87,7 @@ def engineer_customer_features(transac_df: pd.DataFrame):
         customer_features['cust_' + key + '_mean'] = customer_transactions[key].mean()[key]
         customer_features['cust_' + key + '_std'] = customer_transactions[key].std()[key]
         customer_features['cust_' + key + '_std'].fillna(0.0, inplace=True)
+
     return customer_features
 
 
@@ -121,22 +114,30 @@ def engineer_article_features(transac_df: pd.DataFrame):
     return article_features
 
 
+def replace_missing_values(df, engineered_article_columns, engineered_customer_columns):
+    # Replace missing values
+    for key in Features.ARTICLE_CONTI_FEATURES + Features.TRANSACTION_CONTI_FEATURES:
+        df['cust_' + key + '_min'].fillna(df['cust_' + key + '_min'].median(), inplace=True)
+        df['cust_' + key + '_max'].fillna(df['cust_' + key + '_max'].median(), inplace=True)
+        df['cust_' + key + '_mean'].fillna(df['cust_' + key + '_mean'].median(), inplace=True)
+    for key in engineered_customer_columns:
+        df[key].fillna(0.0, inplace=True)
+
+    # Replace missing values
+    for key in Features.CUSTOMER_CONTI_FEATURES + Features.TRANSACTION_CONTI_FEATURES:
+        df['art_' + key + '_min'].fillna(df['art_' + key + '_min'].median(), inplace=True)
+        df['art_' + key + '_max'].fillna(df['art_' + key + '_max'].median(), inplace=True)
+        df['art_' + key + '_mean'].fillna(df['art_' + key + '_mean'].median(), inplace=True)
+    for key in engineered_article_columns:
+        df[key].fillna(0.0, inplace=True)
+
+
 def merge_cross_features(customer_features: pd.DataFrame,
                          article_features: pd.DataFrame,
                          transac_df: pd.DataFrame):
     result_df = transac_df.merge(customer_features, on='customer_id', how='left')
     result_df = result_df.merge(article_features, on='article_id', how='left')
     return result_df
-
-
-def augment_with_negative_examples(pos_transactions_df):
-    neg_transactions_df = pos_transactions_df.copy()
-    # We simply shuffle the customer id column to create the negative observations
-    neg_transactions_df['customer_id'] = neg_transactions_df['customer_id'].sample(frac=1.0).to_list()
-    neg_transactions_df[Features.LABEL] = 0.0
-    all_transactions_df = pd.concat([pos_transactions_df, neg_transactions_df])
-    # Shuffle positive and negative examples
-    return all_transactions_df.sample(frac=1.0)
 
 
 def build_dataset(all_articles, previous_week_transactions_df):
@@ -149,43 +150,64 @@ def build_dataset(all_articles, previous_week_transactions_df):
         # Add random negative observations
         customer_articles = set(customer_transactions_df.article_id.unique())
         available_negs = list(all_articles - customer_articles)
-        negatives = random.sample(available_negs, 300)
+        negatives = random.sample(available_negs, 10)
         for neg_article_id in negatives:
             positive_obs = (customer_id, neg_article_id, 0.0)
             observations.append(positive_obs)
     return pd.DataFrame.from_records(observations, columns=['customer_id', 'article_id', Features.LABEL])
 
 
-def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
-    if os.path.exists('train_df.p') and os.path.exists('test_df.p'):
-        print('Loading existing train and test dataframes')
-        train_df = pickle.load(open('train_df.p', 'rb'))
-        test_df = pickle.load(open('test_df.p', 'rb'))
-        customer_features = ['cust_nb_transactions', 'cust_nb_dates',
-                             'cust_nb_article_id', 'cust_ratio_article_id',
-                             'cust_nb_product_type_name', 'cust_ratio_product_type_name',
-                             'cust_nb_product_group_name', 'cust_ratio_product_group_name',
-                             'cust_nb_colour_group_name', 'cust_ratio_colour_group_name',
-                             'cust_nb_department_name', 'cust_ratio_department_name',
-                             'cust_nb_index_name', 'cust_ratio_index_name', 'cust_nb_section_name',
-                             'cust_ratio_section_name', 'cust_nb_garment_group_name',
-                             'cust_ratio_garment_group_name',
-                             'cust_price_min', 'cust_price_max', 'cust_price_mean', 'cust_price_std']
-        article_features = ['art_nb_transactions',
-                            'art_nb_dates', 'art_nb_customer_id', 'art_ratio_customer_id',
-                            'art_nb_FN', 'art_ratio_FN', 'art_nb_Active', 'art_ratio_Active',
-                            'art_nb_club_member_status', 'art_ratio_club_member_status',
-                            'art_nb_fashion_news_frequency', 'art_ratio_fashion_news_frequency',
-                            'art_nb_age_interval', 'art_ratio_age_interval', 'art_nb_postal_code',
-                            'art_ratio_postal_code', 'art_age_min', 'art_age_max', 'art_age_mean',
-                            'art_age_std', 'art_price_min', 'art_price_max', 'art_price_mean', 'art_price_std']
-        engineered_features = customer_features + article_features
-        return train_df, test_df, engineered_features
+class HmData:
+    def __init__(self, article_df, customer_df, train_df, test_df,
+                 all_articles_counts,
+                 engineered_article_features: pd.DataFrame,
+                 engineered_customer_features: pd.DataFrame):
+        self.article_df = article_df
+        self.customer_df = customer_df
+        self.train_df = train_df
+        self.test_df = test_df
+        self.all_articles_counts = all_articles_counts
+        self.engineered_article_features = engineered_article_features
+        self.engineered_customer_features = engineered_customer_features
 
-    print('train and test dataframes not found on disk. Loading data...')
+    @property
+    def engineered_columns(self) -> List[str]:
+        return self.engineered_article_columns + self.engineered_customer_columns
+
+    @property
+    def engineered_article_columns(self) -> List[str]:
+        return list(set(self.engineered_article_features.columns) - {'article_id'})
+
+    @property
+    def engineered_customer_columns(self):
+        return list(set(self.engineered_customer_features.columns) - {'customer_id'})
+
+
+def find_unique_values(train_df: pd.DataFrame, article_df: pd.DataFrame, customer_df: pd.DataFrame):
+    unique_values = {}
+
+    print('Find unique article categorical values')
+    transactions_x_article_data = train_df.merge(article_df, on='article_id')
+    for categ_variable in Features.ARTICLE_CATEG_FEATURES:
+        unique_values[categ_variable] = transactions_x_article_data[categ_variable].unique()
+
+    print('Find unique customer categorical values')
+    transactions_x_customer_data = train_df.merge(customer_df, on='customer_id')
+    for categ_variable in Features.CUSTOMER_CATEG_FEATURES:
+        unique_values[categ_variable] = transactions_x_customer_data[categ_variable].unique()
+
+    return unique_values
+
+
+def load_data() -> HmData:
+    if os.path.exists('data.p'):
+        print('Loading existing data')
+        return pickle.load(open('data.p', 'rb'))
+
+    print('data not found on disk. Loading data...')
 
     print('Loading articles')
-    article_df = pd.read_csv("../hmdata/articles.csv.zip")
+    article_df = pd.read_csv("../hmdata/articles.csv.zip")[Features.ARTICLE_FEATURES]
     for categ_variable in Features.ARTICLE_CATEG_FEATURES:
         article_df[categ_variable] = article_df[categ_variable].astype(str)
 
@@ -194,40 +216,47 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
     preprocess_customer_data(customer_df)
     for categ_variable in Features.CUSTOMER_CATEG_FEATURES:
         customer_df[categ_variable] = customer_df[categ_variable].astype(str)
+    customer_df = customer_df[Features.CUSTOMER_FEATURES]
 
     print('Loading transactions')
-    transactions_df = pd.read_csv('../hmdata/transactions_train.csv.zip')
+    transactions_df = pd.read_csv('../hmdata/transactions_train.csv.zip', parse_dates=['t_dat'])
     transactions_df['article_id'] = transactions_df['article_id'].astype(str)
     transactions_df['customer_id'] = transactions_df['customer_id'].astype(str)
+    transactions_df['week'] = (transactions_df['t_dat'] - transactions_df['t_dat'].min()).dt.days // 7
 
-    date_feat = transactions_df['t_dat']
-    print('Keep last 3 months of transactions only')
-    past_three_month_transactions_df = transactions_df[date_feat >= '2020-06-09']
-    print('Enrich transactions')
-    enrich_transactions(article_df, customer_df, past_three_month_transactions_df)
+    print('Use last 3 months of transactions only')
+    last_week = transactions_df['week'].max()
+    first_week = last_week - 4 * 3 - 1
+    df = transactions_df[transactions_df['week'] >= (last_week - 4 * 3 - 1)]
 
-    last_week_transactions_df = past_three_month_transactions_df[date_feat >= '2020-09-16']
-    previous_week_transactions_df = past_three_month_transactions_df[(date_feat >= '2020-09-09') & (date_feat < '2020-09-16')]
-    transactions_before_last_weeks_df = past_three_month_transactions_df[date_feat < '2020-09-16']
-    all_candidate_articles = set(transactions_before_last_weeks_df.article_id.unique())
-    train_df = build_dataset(all_candidate_articles, previous_week_transactions_df).sample(n=8_000_000)
-    enrich_transactions(article_df, customer_df, train_df)
-    test_df = build_dataset(all_candidate_articles, last_week_transactions_df).sample(n=200_000)
-    enrich_transactions(article_df, customer_df, test_df)
+    print('Enrich transaction data with metadata')
+    df = enrich_transactions(article_df, customer_df, df)
+    # All transactions are positive examples. Negatives will be sampled later
+    df[Features.LABEL] = 1.0
+
+    # Split: last week for test and the previous ones for training
+    print('Split data into train and test data')
+    test_df = df.loc[df['week'] == last_week]
+    train_df = df.loc[(df['week'] >= first_week) & (df['week'] < last_week)]
+
+    # Build article counts map for popularity negative sampling
+    all_articles_counts = train_df.article_id.value_counts().to_dict()
 
     print('Engineer new features')
-    article_features = engineer_article_features(transactions_before_last_weeks_df)
-    customer_features = engineer_customer_features(transactions_before_last_weeks_df)
+    article_features = engineer_article_features(train_df)
+    customer_features = engineer_customer_features(train_df)
+
+    print('Merge engineered features')
     train_df = merge_cross_features(customer_features, article_features, train_df)
     test_df = merge_cross_features(customer_features, article_features, test_df)
 
-    engineered_features = list(customer_features.columns) + list(article_features.columns)
+    data = HmData(article_df, customer_df, train_df, test_df, all_articles_counts,
+                  article_features, customer_features)
 
-    for feature in engineered_features:
-        test_df[feature].fillna(0.0, inplace=True)
+    print('Replace missing test values')
+    replace_missing_values(data.test_df, data.engineered_article_columns, data.engineered_customer_columns)
 
-    print('Save training and testing data on disk')
-    pickle.dump(train_df, open('train_df.p', 'wb'))
-    pickle.dump(test_df, open('test_df.p', 'wb'))
+    print('Save data to disk')
+    pickle.dump(data, open('data.p', 'wb'))
 
-    return train_df, test_df, engineered_features
+    return data
