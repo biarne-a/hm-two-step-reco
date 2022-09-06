@@ -155,14 +155,12 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     all_variables = Features.ALL_VARIABLES + data.engineered_columns + ['idx']
     data.train_df[Features.LABEL] = 1.0
     data.train_df['idx'] = np.arange(len(data.train_df))
+    data.test_df['idx'] = np.arange(len(data.test_df))
     pos_train_ds = tf.data.Dataset.from_tensor_slices(dict(data.train_df[all_variables]))
     all_cust_vars = Features.CUSTOMER_FEATURES + data.engineered_customer_columns + ['idx']
     neg_train_ds = tf.data.Dataset.from_tensor_slices(dict(data.train_df[all_cust_vars])) \
         .repeat(count=nb_negatives) \
         .map(add_neg_article_info, num_parallel_calls=tf.data.AUTOTUNE)
-    for test in iter(neg_train_ds):
-        print(test['article_id'])
-        print()
     train_ds = pos_train_ds.concatenate(neg_train_ds) \
         .shuffle(100_000) \
         .batch(batch_size) \
