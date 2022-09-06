@@ -86,6 +86,7 @@ def engineer_customer_features(transac_df: pd.DataFrame):
         customer_features['cust_' + key + '_max'] = customer_transactions[key].max()[key]
         customer_features['cust_' + key + '_mean'] = customer_transactions[key].mean()[key]
         customer_features['cust_' + key + '_std'] = customer_transactions[key].std()[key]
+        customer_features['cust_' + key + '_std'].fillna(0.0, inplace=True)
 
     return customer_features
 
