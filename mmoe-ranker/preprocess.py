@@ -5,7 +5,7 @@ import tensorflow as tf
 from typing import Dict, Tuple, List
 
 from features import Features
-from load_data2 import HmData
+from load_data import HmData
 
 
 class PreprocessedHmData:

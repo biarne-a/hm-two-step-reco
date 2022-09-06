@@ -1,9 +1,8 @@
 import os
 import pickle
 import random
-import numpy as np
 import pandas as pd
-from typing import Tuple, List, Dict
+from typing import List
 
 from features import Features
 
