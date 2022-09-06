@@ -97,6 +97,20 @@ def generative_negatives(customer_ids: List[str],
             yield obs
 
 
+def build_hash_tables(article_dicts: Dict[str, Dict[str, str]],
+                      value_type,
+                      default_value) -> Dict[str, tf.lookup.StaticHashTable]:
+    hash_tables = {}
+    for feature, feature_values in article_dicts.items():
+        keys = list(feature_values.keys())
+        values = list(feature_values.values())
+        keys = tf.constant(keys, dtype=tf.string)
+        values = tf.constant(values, dtype=value_type)
+        hash_tables[feature] = tf.lookup.StaticHashTable(tf.lookup.KeyValueTensorInitializer(keys, values),
+                                                         default_value=default_value)
+    return hash_tables
+
+
 def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     print('Preprocessing')
     lookups = build_lookups(data.train_df)
@@ -111,45 +125,57 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
         article_probs.append(count / total_count)
 
     nb_negatives = 10
-    nb_transac_by_cust = data.train_df.groupby('customer_id').size().to_dict()
-    def neg_by_cust_func(customer_id):
-        nb_transac_for_cust = nb_transac_by_cust[customer_id]
-        nb_negatives_for_cust = nb_negatives * nb_transac_for_cust
-        return np.random.choice(article_ids, size=nb_negatives_for_cust, p=article_probs)
+    nb_train_obs = data.train_df.shape[0] + nb_negatives * data.train_df.shape[0]
+    nb_test_obs = data.test_df.shape[0] + nb_negatives * data.test_df.shape[0]
 
-    customer_categ_dicts = data.customer_df.set_index('customer_id', drop=False).to_dict(orient='index')
-    customer_engineered_dicts = data.engineered_customer_features.set_index('customer_id', drop=True).to_dict(orient='index')
-    article_categ_dicts = data.article_df.set_index('article_id', drop=False).to_dict(orient='index')
-    article_engineered_dicts = data.engineered_article_features.set_index('article_id', drop=True).to_dict(orient='index')
+    article_categ_dicts = data.article_df.set_index('article_id', drop=False).to_dict()
+    article_categ_hash_tables = build_hash_tables(article_categ_dicts, value_type=tf.string, default_value="")
+    article_engineered_dicts = data.engineered_article_features.set_index('article_id', drop=True).to_dict()
+    article_engineered_hash_tables = build_hash_tables(article_engineered_dicts, value_type=tf.float64, default_value=0.0)
 
-    def gen_negatives():
-        return generative_negatives(data.train_df.customer_id.to_list(),
-                                    data.engineered_customer_columns,
-                                    data.engineered_article_columns,
-                                    neg_by_cust_func,
-                                    customer_categ_dicts,
-                                    customer_engineered_dicts,
-                                    article_categ_dicts,
-                                    article_engineered_dicts)
+    all_neg_article_ids = tf.constant(np.random.choice(article_ids, size=nb_train_obs, p=article_probs),
+                                      dtype=tf.string)
 
-    all_variables = Features.ALL_VARIABLES + data.engineered_columns
+    def add_neg_article_info(inputs):
+        neg_article_id = tf.gather(all_neg_article_ids, inputs['idx'])
+        inputs['article_id'] = neg_article_id
+        for feature, hash_table in article_categ_hash_tables.items():
+            inputs[feature] = hash_table.lookup(neg_article_id)
+        for feature, hash_table in article_engineered_hash_tables.items():
+            inputs[feature] = hash_table.lookup(neg_article_id)
+        inputs[Features.LABEL] = tf.constant(0.0, dtype=tf.float64)
+        for key, value in inputs.items():
+            inputs[key] = tf.reshape(value, shape=())
+        return inputs
+
+    for key in data.train_df.columns:
+        if '_nb_' in key:
+            data.train_df[key] = data.train_df[key].astype(np.float64)
+
+    all_variables = Features.ALL_VARIABLES + data.engineered_columns + ['idx']
     data.train_df[Features.LABEL] = 1.0
+    data.train_df['idx'] = np.arange(len(data.train_df))
     pos_train_ds = tf.data.Dataset.from_tensor_slices(dict(data.train_df[all_variables]))
-    neg_train_ds = tf.data.Dataset.from_generator(gen_negatives, output_signature=pos_train_ds.element_spec)
+    all_cust_vars = Features.CUSTOMER_FEATURES + data.engineered_customer_columns + ['idx']
+    neg_train_ds = tf.data.Dataset.from_tensor_slices(dict(data.train_df[all_cust_vars])) \
+        .repeat(count=nb_negatives) \
+        .map(add_neg_article_info, num_parallel_calls=tf.data.AUTOTUNE)
+    for test in iter(neg_train_ds):
+        print(test['article_id'])
+        print()
     train_ds = pos_train_ds.concatenate(neg_train_ds) \
         .shuffle(100_000) \
         .batch(batch_size) \
         .map(lambda inputs: prepare_batch(inputs, lookups)) \
         .repeat()
     pos_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_variables]))
-    neg_test_ds = tf.data.Dataset.from_generator(gen_negatives, output_signature=pos_test_ds.element_spec)
+    neg_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_cust_vars])) \
+        .repeat(count=nb_negatives) \
+        .map(add_neg_article_info, num_parallel_calls=tf.data.AUTOTUNE)
     test_ds = pos_test_ds.concatenate(neg_test_ds) \
         .batch(batch_size) \
         .map(lambda inputs: prepare_batch(inputs, lookups)) \
         .repeat()
-
-    nb_train_obs = data.train_df.shape[0] + nb_negatives * data.train_df.shape[0]
-    nb_test_obs = data.test_df.shape[0] + nb_negatives * data.test_df.shape[0]
 
     print(f'nb_train_obs: {nb_train_obs}')
     print(f'nb_test_obs: {nb_test_obs}')

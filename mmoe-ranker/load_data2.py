@@ -208,7 +208,7 @@ def load_data() -> HmData:
     print('Use last 3 months of transactions only')
     last_week = transactions_df['week'].max()
     first_week = last_week - 4 * 3 - 1
-    df = transactions_df[transactions_df['week'] >= (last_week - 4 * 3 - 1)].sample(frac=0.01)
+    df = transactions_df[transactions_df['week'] >= (last_week - 4 * 3 - 1)]
 
     print('Enrich transaction data with metadata')
     df = enrich_transactions(article_df, customer_df, df)
