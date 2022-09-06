@@ -87,14 +87,6 @@ def engineer_customer_features(transac_df: pd.DataFrame):
         customer_features['cust_' + key + '_mean'] = customer_transactions[key].mean()[key]
         customer_features['cust_' + key + '_std'] = customer_transactions[key].std()[key]
 
-    # Replace missing values
-    for key in Features.ARTICLE_CONTI_FEATURES + Features.TRANSACTION_CONTI_FEATURES:
-        customer_features['cust_' + key + '_min'].fillna(customer_features['cust_' + key + '_min'].median(), inplace=True)
-        customer_features['cust_' + key + '_max'].fillna(customer_features['cust_' + key + '_max'].median(), inplace=True)
-        customer_features['cust_' + key + '_mean'].fillna(customer_features['cust_' + key + '_mean'].median(), inplace=True)
-    for key in customer_features.key():
-        customer_features[key].fillna(0.0, inplace=True)
-
     return customer_features
 
 
@@ -118,15 +110,25 @@ def engineer_article_features(transac_df: pd.DataFrame):
         article_features['art_' + key + '_std'] = article_transactions[key].std()[key]
         article_features['art_' + key + '_std'].fillna(0.0, inplace=True)
 
+    return article_features
+
+
+def replace_missing_values(df, engineered_article_columns, engineered_customer_columns):
+    # Replace missing values
+    for key in Features.ARTICLE_CONTI_FEATURES + Features.TRANSACTION_CONTI_FEATURES:
+        df['cust_' + key + '_min'].fillna(df['cust_' + key + '_min'].median(), inplace=True)
+        df['cust_' + key + '_max'].fillna(df['cust_' + key + '_max'].median(), inplace=True)
+        df['cust_' + key + '_mean'].fillna(df['cust_' + key + '_mean'].median(), inplace=True)
+    for key in engineered_customer_columns:
+        df[key].fillna(0.0, inplace=True)
+
     # Replace missing values
     for key in Features.CUSTOMER_CONTI_FEATURES + Features.TRANSACTION_CONTI_FEATURES:
-        article_features['art_' + key + '_min'].fillna(article_features['art_' + key + '_min'].median(), inplace=True)
-        article_features['art_' + key + '_max'].fillna(article_features['art_' + key + '_max'].median(), inplace=True)
-        article_features['art_' + key + '_mean'].fillna(article_features['art_' + key + '_mean'].median(), inplace=True)
-    for key in article_features.key():
-        article_features[key].fillna(0.0, inplace=True)
-
-    return article_features
+        df['art_' + key + '_min'].fillna(df['art_' + key + '_min'].median(), inplace=True)
+        df['art_' + key + '_max'].fillna(df['art_' + key + '_max'].median(), inplace=True)
+        df['art_' + key + '_mean'].fillna(df['art_' + key + '_mean'].median(), inplace=True)
+    for key in engineered_article_columns:
+        df[key].fillna(0.0, inplace=True)
 
 
 def merge_cross_features(customer_features: pd.DataFrame,
@@ -249,6 +251,9 @@ def load_data() -> HmData:
 
     data = HmData(article_df, customer_df, train_df, test_df, all_articles_counts,
                   article_features, customer_features)
+
+    print('Replace missing test values')
+    replace_missing_values(data.test_df, data.engineered_article_columns, data.engineered_customer_columns)
 
     print('Save data to disk')
     pickle.dump(data, open('data.p', 'wb'))
