@@ -86,7 +86,15 @@ def engineer_customer_features(transac_df: pd.DataFrame):
         customer_features['cust_' + key + '_max'] = customer_transactions[key].max()[key]
         customer_features['cust_' + key + '_mean'] = customer_transactions[key].mean()[key]
         customer_features['cust_' + key + '_std'] = customer_transactions[key].std()[key]
-        customer_features['cust_' + key + '_std'].fillna(0.0, inplace=True)
+
+    # Replace missing values
+    for key in Features.ARTICLE_CONTI_FEATURES + Features.TRANSACTION_CONTI_FEATURES:
+        customer_features['cust_' + key + '_min'].fillna(customer_features['cust_' + key + '_min'].median(), inplace=True)
+        customer_features['cust_' + key + '_max'].fillna(customer_features['cust_' + key + '_max'].median(), inplace=True)
+        customer_features['cust_' + key + '_mean'].fillna(customer_features['cust_' + key + '_mean'].median(), inplace=True)
+    for key in customer_features.key():
+        customer_features[key].fillna(0.0, inplace=True)
+
     return customer_features
 
 
@@ -109,6 +117,14 @@ def engineer_article_features(transac_df: pd.DataFrame):
         article_features['art_' + key + '_mean'] = article_transactions[key].mean()[key]
         article_features['art_' + key + '_std'] = article_transactions[key].std()[key]
         article_features['art_' + key + '_std'].fillna(0.0, inplace=True)
+
+    # Replace missing values
+    for key in Features.CUSTOMER_CONTI_FEATURES + Features.TRANSACTION_CONTI_FEATURES:
+        article_features['art_' + key + '_min'].fillna(article_features['art_' + key + '_min'].median(), inplace=True)
+        article_features['art_' + key + '_max'].fillna(article_features['art_' + key + '_max'].median(), inplace=True)
+        article_features['art_' + key + '_mean'].fillna(article_features['art_' + key + '_mean'].median(), inplace=True)
+    for key in article_features.key():
+        article_features[key].fillna(0.0, inplace=True)
 
     return article_features
 

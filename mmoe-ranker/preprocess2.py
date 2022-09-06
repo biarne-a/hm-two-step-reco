@@ -161,7 +161,10 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     neg_train_ds = tf.data.Dataset.from_tensor_slices(dict(data.train_df[all_cust_vars])) \
         .repeat(count=nb_negatives) \
         .map(add_neg_article_info, num_parallel_calls=tf.data.AUTOTUNE)
-    train_ds = pos_train_ds.concatenate(neg_train_ds) \
+    choice_dataset = tf.data.Dataset.from_tensors(tf.constant(0, dtype=tf.int64))\
+        .concatenate(tf.data.Dataset.from_tensors(tf.constant(1, dtype=tf.int64)).repeat(nb_negatives))\
+        .repeat(len(data.train_df))
+    train_ds = tf.data.Dataset.choose_from_datasets([pos_train_ds, neg_train_ds], choice_dataset)\
         .shuffle(100_000) \
         .batch(batch_size) \
         .map(lambda inputs: prepare_batch(inputs, lookups)) \
@@ -170,7 +173,10 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     neg_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_cust_vars])) \
         .repeat(count=nb_negatives) \
         .map(add_neg_article_info, num_parallel_calls=tf.data.AUTOTUNE)
-    test_ds = pos_test_ds.concatenate(neg_test_ds) \
+    choice_dataset = tf.data.Dataset.from_tensors(tf.constant(0, dtype=tf.int64)) \
+        .concatenate(tf.data.Dataset.from_tensors(tf.constant(1, dtype=tf.int64)).repeat(nb_negatives)) \
+        .repeat(len(data.test_df))
+    test_ds = tf.data.Dataset.choose_from_datasets([pos_test_ds, neg_test_ds], choice_dataset)\
         .batch(batch_size) \
         .map(lambda inputs: prepare_batch(inputs, lookups)) \
         .repeat()
