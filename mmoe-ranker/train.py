@@ -16,10 +16,12 @@ def run_training(data: PreprocessedHmData, config: Config):
     weight_for_1 = 10.0
     class_weight = {0: weight_for_0, 1: weight_for_1}
 
-    return model.fit(x=data.train_ds,
-                     epochs=config.nb_epochs,
-                     steps_per_epoch=data.nb_train_obs // config.batch_size,
-                     validation_data=data.test_ds,
-                     validation_steps=data.nb_test_obs // config.batch_size,
-                     class_weight=class_weight,
-                     verbose=1)
+    history = model.fit(x=data.train_ds,
+                        epochs=config.nb_epochs,
+                        steps_per_epoch=data.nb_train_obs // config.batch_size,
+                        validation_data=data.test_ds,
+                        validation_steps=data.nb_test_obs // config.batch_size,
+                        class_weight=class_weight,
+                        verbose=1)
+    return model, history
+
