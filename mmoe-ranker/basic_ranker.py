@@ -39,3 +39,4 @@ class BasicRanker(keras.models.Model):
         for dense in self._dense_layers:
             outputs = dense(outputs)
         return outputs
+        # return outputs, outputs
