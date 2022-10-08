@@ -24,5 +24,5 @@ class Features:
     LABEL5 = 'index_name'
     LABEL6 = 'section_name'
     LABEL7 = 'garment_group_name'
-    LABELS = [LABEL1 + LABEL2 + LABEL3 + LABEL4 + LABEL5 + LABEL6 + LABEL7]
+    LABELS = [LABEL1, LABEL2, LABEL3, LABEL4, LABEL5, LABEL6, LABEL7]
     ALL_VARIABLES: List[str] = ALL_CATEG_FEATURES + ALL_CONTI_FEATURES + LABELS
