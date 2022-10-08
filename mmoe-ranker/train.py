@@ -9,15 +9,15 @@ from preprocess import PreprocessedHmData
 def run_training(data: PreprocessedHmData, config: Config):
     model = BasicRanker(data)
     model.compile(optimizer=tf.keras.optimizers.Adagrad(learning_rate=config.learning_rate),
-                  loss=tf.keras.losses.BinaryCrossentropy(from_logits=False),
-                  # loss=[
-                  #     tf.keras.losses.BinaryCrossentropy(from_logits=False),
-                  #     tf.keras.losses.BinaryCrossentropy(from_logits=False),
-                  # ],
-                  metrics=[
-                      tf.keras.metrics.AUC(curve='PR'),
-                      tfr.keras.metrics.MeanAveragePrecisionMetric(topn=12)
-                  ],
+                  loss={
+                      'output1': tf.keras.losses.BinaryCrossentropy(from_logits=False),
+                      'output2': tf.keras.losses.CategoricalCrossentropy(from_logits=False),
+                  },
+                  metrics={
+                      'output1': tf.keras.metrics.AUC(curve='PR'),
+                      'output2': [tfr.keras.metrics.PrecisionMetric(topn=1),
+                                  tfr.keras.metrics.RecallMetric(topn=1)]
+                  },
                   run_eagerly=False)
 
     weight_for_0 = 1.0

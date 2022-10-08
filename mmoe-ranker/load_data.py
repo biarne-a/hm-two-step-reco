@@ -43,23 +43,6 @@ def split_data(df):
     return train_df, test_df
 
 
-def create_negative_transactions(transactions_df: pd.DataFrame,
-                                 article_df: pd.DataFrame) -> pd.DataFrame:
-    all_article_ids = set(article_df['article_id'].unique())
-    by_customer_df = transactions_df.groupby("customer_id", as_index=False)
-    articles_by_customer = by_customer_df['article_id'].agg(['unique']).reset_index()
-    articles_by_customer.columns = ['customer_id', 'article_list']
-
-    negatives = []
-    for _, row in articles_by_customer.iterrows():
-        customer_id = row['customer_id']
-        unpurchased_articles = list(all_article_ids - set(row['article_list']))
-        sampled_article_ids = random.sample(unpurchased_articles, len(row['article_list']))
-        for article_id in sampled_article_ids:
-            negatives.append((customer_id, article_id, 0.0))
-    return pd.DataFrame(negatives, columns=['customer_id', 'article_id', Features.LABEL])
-
-
 def enrich_transactions(article_df: pd.DataFrame,
                         customer_df: pd.DataFrame,
                         transactions_df: pd.DataFrame):
@@ -153,7 +136,7 @@ def build_dataset(all_articles, previous_week_transactions_df):
         for neg_article_id in negatives:
             positive_obs = (customer_id, neg_article_id, 0.0)
             observations.append(positive_obs)
-    return pd.DataFrame.from_records(observations, columns=['customer_id', 'article_id', Features.LABEL])
+    return pd.DataFrame.from_records(observations, columns=['customer_id', 'article_id', Features.LABEL1])
 
 
 class HmData:
@@ -231,7 +214,7 @@ def load_data() -> HmData:
     print('Enrich transaction data with metadata')
     df = enrich_transactions(article_df, customer_df, df)
     # All transactions are positive examples. Negatives will be sampled later
-    df[Features.LABEL] = 1.0
+    df[Features.LABEL1] = 1.0
 
     # Split: last week for test and the previous ones for training
     print('Split data into train and test data')

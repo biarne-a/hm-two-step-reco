@@ -15,9 +15,10 @@ class BasicRanker(keras.models.Model):
         self._dense2 = keras.layers.Dense(128, activation='relu')
         self._dense3 = keras.layers.Dense(64, activation='relu')
         self._dense4 = keras.layers.Dense(32, activation='relu')
-        self._dense5 = keras.layers.Dense(16, activation='relu')
-        self._dense6 = keras.layers.Dense(1, activation='sigmoid')
-        self._dense_layers = [self._dense1, self._dense2, self._dense3, self._dense4, self._dense5, self._dense6]
+        self._dense_layers = [self._dense1, self._dense2, self._dense3, self._dense4, self._dense5]
+        self._main_label_dense = keras.layers.Dense(1, activation='sigmoid', name="output1")
+        nb_labels2 = len(data.lookups[Features.LABEL2].input_vocabulary)
+        self._label2_dense = keras.layers.Dense(nb_labels2, activation='softmax', name="output2")
 
     def _build_embedding_layer(self, lookup: keras.layers.StringLookup):
         vocab_size = len(lookup.input_vocabulary) + 1
@@ -35,8 +36,9 @@ class BasicRanker(keras.models.Model):
             normalized_var = norm_layer(inputs[key])
             vars_to_concat.append(tf.expand_dims(normalized_var, axis=1))
         concatanated_vars = tf.concat(vars_to_concat, axis=1)
-        outputs = concatanated_vars
+        dense_outputs = concatanated_vars
         for dense in self._dense_layers:
-            outputs = dense(outputs)
-        return outputs
-        # return outputs, outputs
+            dense_outputs = dense(dense_outputs)
+        main_label_output = self._main_label_dense(dense_outputs)
+        label2_output = self._label2_dense(dense_outputs)
+        return main_label_output, label2_output

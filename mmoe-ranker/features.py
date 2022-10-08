@@ -17,5 +17,12 @@ class Features:
     ALL_CATEG_FEATURES = ARTICLE_CATEG_FEATURES + CUSTOMER_CATEG_FEATURES
     ALL_CONTI_FEATURES = ARTICLE_CONTI_FEATURES + CUSTOMER_CONTI_FEATURES
 
-    LABEL = 'bought'
-    ALL_VARIABLES: List[str] = ALL_CATEG_FEATURES + ALL_CONTI_FEATURES + [LABEL]
+    LABEL1 = 'bought'
+    LABEL2 = 'product_type_name'
+    LABEL3 = 'product_group_name'
+    LABEL4 = 'department_name'
+    LABEL5 = 'index_name'
+    LABEL6 = 'section_name'
+    LABEL7 = 'garment_group_name'
+    LABELS = [LABEL1 + LABEL2 + LABEL3 + LABEL4 + LABEL5 + LABEL6 + LABEL7]
+    ALL_VARIABLES: List[str] = ALL_CATEG_FEATURES + ALL_CONTI_FEATURES + LABELS

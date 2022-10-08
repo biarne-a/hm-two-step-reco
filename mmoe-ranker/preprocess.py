@@ -24,16 +24,19 @@ class PreprocessedHmData:
         self.normalization_layers = normalization_layers
 
 
-def prepare_batch(inputs: Dict[str, tf.Tensor],
-                  lookups: Dict[str, tf.keras.layers.StringLookup]) -> Tuple[Dict[str, tf.Tensor], tf.Tensor]:
+def prepare_batch(
+        inputs: Dict[str, tf.Tensor],
+        lookups: Dict[str, tf.keras.layers.StringLookup]
+) -> Tuple[Dict[str, tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]:
     batch_inputs = {}
     for key, value in inputs.items():
         if key in lookups:
             batch_inputs[key] = lookups[key](value)
         else:
             batch_inputs[key] = value
-    label = inputs[Features.LABEL]
-    return batch_inputs, label
+    label1 = inputs[Features.LABEL1]
+    label2 = inputs[Features.LABEL2]
+    return batch_inputs, (label1, label2)
 
 
 def build_lookups(train_df: pd.DataFrame) -> Dict[str, tf.keras.layers.StringLookup]:
@@ -93,7 +96,7 @@ def generative_negatives(customer_ids: List[str],
                 obs[key] = article_categ_dicts[neg_article_id][key]
             for key in engineered_article_columns:
                 obs[key] = article_engineered_dicts[neg_article_id][key]
-            obs[Features.LABEL] = 0.0
+            obs[Features.LABEL1] = 0.0
             yield obs
 
 
@@ -131,7 +134,8 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     article_categ_dicts = data.article_df.set_index('article_id', drop=False).to_dict()
     article_categ_hash_tables = build_hash_tables(article_categ_dicts, value_type=tf.string, default_value="")
     article_engineered_dicts = data.engineered_article_features.set_index('article_id', drop=True).to_dict()
-    article_engineered_hash_tables = build_hash_tables(article_engineered_dicts, value_type=tf.float64, default_value=0.0)
+    article_engineered_hash_tables = build_hash_tables(article_engineered_dicts, value_type=tf.float64,
+                                                       default_value=0.0)
 
     all_neg_article_ids = tf.constant(np.random.choice(article_ids, size=nb_train_obs, p=article_probs),
                                       dtype=tf.string)
@@ -143,7 +147,7 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
             inputs[feature] = hash_table.lookup(neg_article_id)
         for feature, hash_table in article_engineered_hash_tables.items():
             inputs[feature] = hash_table.lookup(neg_article_id)
-        inputs[Features.LABEL] = tf.constant(0.0, dtype=tf.float64)
+        inputs[Features.LABEL1] = tf.constant(0.0, dtype=tf.float64)
         for key, value in inputs.items():
             inputs[key] = tf.reshape(value, shape=())
         return inputs
@@ -153,7 +157,7 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
             data.train_df[key] = data.train_df[key].astype(np.float64)
 
     all_variables = Features.ALL_VARIABLES + data.engineered_columns + ['idx']
-    data.train_df[Features.LABEL] = 1.0
+    # data.train_df[Features.LABEL] = 1.0
     data.train_df['idx'] = np.arange(len(data.train_df))
     data.test_df['idx'] = np.arange(len(data.test_df))
     pos_train_ds = tf.data.Dataset.from_tensor_slices(dict(data.train_df[all_variables]))
