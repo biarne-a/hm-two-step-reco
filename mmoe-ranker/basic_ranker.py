@@ -15,7 +15,7 @@ class BasicRanker(keras.models.Model):
         self._dense2 = keras.layers.Dense(128, activation='relu')
         self._dense3 = keras.layers.Dense(64, activation='relu')
         self._dense4 = keras.layers.Dense(32, activation='relu')
-        self._dense_layers = [self._dense1, self._dense2, self._dense3, self._dense4, self._dense5]
+        self._dense_layers = [self._dense1, self._dense2, self._dense3, self._dense4]
         self._main_label_dense = keras.layers.Dense(1, activation='sigmoid', name="output1")
         nb_labels2 = len(data.lookups[Features.LABEL2].input_vocabulary)
         self._label2_dense = keras.layers.Dense(nb_labels2, activation='softmax', name="output2")
