@@ -41,4 +41,7 @@ class BasicRanker(keras.models.Model):
             dense_outputs = dense(dense_outputs)
         main_label_output = self._main_label_dense(dense_outputs)
         label2_output = self._label2_dense(dense_outputs)
-        return main_label_output, label2_output
+        return {
+            'output1': main_label_output,
+            'output2': label2_output
+        }

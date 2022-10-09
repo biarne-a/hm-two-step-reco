@@ -26,8 +26,9 @@ class PreprocessedHmData:
 
 def prepare_batch(
         inputs: Dict[str, tf.Tensor],
-        lookups: Dict[str, tf.keras.layers.StringLookup]
-) -> Tuple[Dict[str, tf.Tensor], Tuple[tf.Tensor, tf.Tensor]]:
+        lookups: Dict[str, tf.keras.layers.StringLookup],
+        one_hot_encoding_layer: tf.keras.layers.CategoryEncoding,
+) -> Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]]:
     batch_inputs = {}
     for key, value in inputs.items():
         if key in lookups:
@@ -35,8 +36,17 @@ def prepare_batch(
         else:
             batch_inputs[key] = value
     label1 = inputs[Features.LABEL1]
-    label2 = inputs[Features.LABEL2]
-    return batch_inputs, (label1, label2)
+
+    label2_lookup = lookups[Features.LABEL2]
+    label2_indice = label2_lookup(inputs[Features.LABEL2])
+    label2_one_hot = one_hot_encoding_layer(label2_indice)
+
+    outputs = {
+        'output1': label1,
+        'output2': label2_one_hot,
+    }
+
+    return batch_inputs, outputs
 
 
 def build_lookups(train_df: pd.DataFrame) -> Dict[str, tf.keras.layers.StringLookup]:
@@ -156,8 +166,11 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
         if '_nb_' in key:
             data.train_df[key] = data.train_df[key].astype(np.float64)
 
+    label2_lookup = lookups[Features.LABEL2]
+    num_label2 = len(label2_lookup.input_vocabulary)
+    one_hot_encoding_layer = tf.keras.layers.CategoryEncoding(num_tokens=num_label2, output_mode="one_hot")
+
     all_variables = Features.ALL_VARIABLES + data.engineered_columns + ['idx']
-    # data.train_df[Features.LABEL] = 1.0
     data.train_df['idx'] = np.arange(len(data.train_df))
     data.test_df['idx'] = np.arange(len(data.test_df))
     pos_train_ds = tf.data.Dataset.from_tensor_slices(dict(data.train_df[all_variables]))
@@ -171,7 +184,7 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     train_ds = tf.data.Dataset.choose_from_datasets([pos_train_ds, neg_train_ds], choice_dataset) \
         .shuffle(100_000) \
         .batch(batch_size) \
-        .map(lambda inputs: prepare_batch(inputs, lookups)) \
+        .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer)) \
         .repeat()
     pos_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_variables]))
     neg_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_cust_vars])) \
@@ -182,7 +195,7 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
         .repeat(len(data.test_df))
     test_ds = tf.data.Dataset.choose_from_datasets([pos_test_ds, neg_test_ds], choice_dataset) \
         .batch(batch_size) \
-        .map(lambda inputs: prepare_batch(inputs, lookups)) \
+        .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer)) \
         .repeat()
 
     print(f'nb_train_obs: {nb_train_obs}')
