@@ -167,7 +167,7 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
             data.train_df[key] = data.train_df[key].astype(np.float64)
 
     label2_lookup = lookups[Features.LABEL2]
-    num_label2 = len(label2_lookup.input_vocabulary)
+    num_label2 = len(label2_lookup.input_vocabulary) + 1
     one_hot_encoding_layer = tf.keras.layers.CategoryEncoding(num_tokens=num_label2, output_mode="one_hot")
 
     all_variables = Features.ALL_VARIABLES + data.engineered_columns + ['idx']
