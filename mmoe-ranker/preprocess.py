@@ -131,10 +131,10 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     normalization_layers = build_normalization_layers(data)
 
     total_count = len(data.train_df)
-    article_ids = []
+    article_ids = lookups['article_id'].input_vocabulary
     article_probs = []
-    for article_id, count in data.all_articles_counts.items():
-        article_ids.append(article_id)
+    for article_id in article_ids:
+        count = data.all_articles_counts[article_id]
         article_probs.append(count / total_count)
 
     nb_negatives = 10
