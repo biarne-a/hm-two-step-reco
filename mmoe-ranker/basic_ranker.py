@@ -35,13 +35,14 @@ class BasicRanker(keras.models.Model):
         for key, norm_layer in self._normalization_layers.items():
             normalized_var = norm_layer(inputs[key])
             vars_to_concat.append(tf.expand_dims(normalized_var, axis=1))
-        concatanated_vars = tf.concat(vars_to_concat, axis=1)
-        dense_outputs = concatanated_vars
+        concatenated_vars = tf.concat(vars_to_concat, axis=1)
+        dense_outputs = concatenated_vars
         for dense in self._dense_layers:
             dense_outputs = dense(dense_outputs)
         main_label_output = self._main_label_dense(dense_outputs)
-        label2_output = self._label2_dense(dense_outputs)
-        return {
-            'output1': main_label_output,
-            'output2': label2_output
-        }
+        # label2_output = self._label2_dense(dense_outputs)
+        # return {
+        #     'output1': main_label_output,
+        #     'output2': label2_output
+        # }
+        return main_label_output

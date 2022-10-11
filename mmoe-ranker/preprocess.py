@@ -74,15 +74,17 @@ def prepare_batch(
             batch_inputs[key] = value
     label1 = inputs[Features.LABEL1]
 
-    label2_lookup = lookups[Features.LABEL2]
-    label2_indice = label2_lookup(inputs[Features.LABEL2])
-    label2_one_hot = one_hot_encoding_layer(label2_indice)
+    # label2_lookup = lookups[Features.LABEL2]
+    # label2_indice = label2_lookup(inputs[Features.LABEL2])
+    # label2_one_hot = one_hot_encoding_layer(label2_indice)
 
-    outputs = {
-        'output1': label1,
-        'output2': label2_one_hot,
-    }
-    return batch_inputs, outputs
+    return batch_inputs, label1
+
+    # outputs = {
+    #     'output1': label1,
+    #     'output2': label2_one_hot,
+    # }
+    # return batch_inputs, outputs
 
 
 def build_lookups(train_df: pd.DataFrame) -> Dict[str, tf.keras.layers.StringLookup]:

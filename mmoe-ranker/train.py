@@ -11,15 +11,17 @@ def run_training(data: PreprocessedHmData, config: Config):
     model = BasicRanker(data)
     weighted_bce_loss = WeightedBinaryCrossEntropy(negative_class_weight=1.0, positve_class_weight=10.0)
     model.compile(optimizer=tf.keras.optimizers.Adagrad(learning_rate=config.learning_rate),
-                  loss={
-                      'output1': weighted_bce_loss,
-                      'output2': tf.keras.losses.CategoricalCrossentropy(from_logits=False),
-                  },
-                  metrics={
-                      'output1': tf.keras.metrics.AUC(curve='PR'),
-                      'output2': [tfr.keras.metrics.PrecisionMetric(topn=1),
-                                  tfr.keras.metrics.RecallMetric(topn=1)]
-                  },
+                  # loss={
+                  #     'output1': weighted_bce_loss,
+                  #     'output2': tf.keras.losses.CategoricalCrossentropy(from_logits=False),
+                  # },
+                  # metrics={
+                  #     'output1': tf.keras.metrics.AUC(curve='PR'),
+                  #     'output2': [tfr.keras.metrics.PrecisionMetric(topn=1),
+                  #                 tfr.keras.metrics.RecallMetric(topn=1)]
+                  # },
+                  loss=weighted_bce_loss,
+                  metrics=tf.keras.metrics.AUC(curve='PR'),
                   run_eagerly=False)
 
     history = model.fit(x=data.train_ds,
