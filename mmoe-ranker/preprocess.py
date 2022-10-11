@@ -24,6 +24,43 @@ class PreprocessedHmData:
         self.normalization_layers = normalization_layers
 
 
+def save_test_dataset(test_ds):
+    from collections import defaultdict
+    all_test_x = defaultdict(list)
+    all_test_y = defaultdict(list)
+    for test_x, test_y in iter(test_ds):
+        for test_x_key, test_x_values in test_x.items():
+            all_test_x[test_x_key].append(test_x_values.numpy())
+        for test_y_key, test_y_values in test_y.items():
+            all_test_y[test_y_key].append(test_y_values.numpy())
+
+    test_x = {}
+    test_y = {}
+    for test_x_key, test_x_list_values in all_test_x.items():
+        test_x[test_x_key] = np.concatenate(test_x_list_values)
+    for test_y_key, test_y_list_values in all_test_y.items():
+        test_y[test_y_key] = np.concatenate(test_y_list_values)
+
+    import pickle
+    pickle.dump(test_x, open('test_x.p', 'wb'))
+    pickle.dump(test_y, open('test_y.p', 'wb'))
+
+
+def generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, batch_size, data, nb_negatives,
+                          lookups, one_hot_encoding_layer):
+    pos_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_variables]))
+    neg_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_cust_vars])) \
+        .repeat(count=nb_negatives) \
+        .map(add_neg_article_info, num_parallel_calls=tf.data.AUTOTUNE)
+    choice_dataset = tf.data.Dataset.from_tensors(tf.constant(0, dtype=tf.int64)) \
+        .concatenate(tf.data.Dataset.from_tensors(tf.constant(1, dtype=tf.int64)).repeat(nb_negatives)) \
+        .repeat(len(data.test_df))
+    return tf.data.Dataset.choose_from_datasets([pos_test_ds, neg_test_ds], choice_dataset) \
+        .batch(batch_size) \
+        .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer)) \
+        .repeat()
+
+
 def prepare_batch(
         inputs: Dict[str, tf.Tensor],
         lookups: Dict[str, tf.keras.layers.StringLookup],
@@ -45,7 +82,6 @@ def prepare_batch(
         'output1': label1,
         'output2': label2_one_hot,
     }
-
     return batch_inputs, outputs
 
 
@@ -186,17 +222,14 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
         .batch(batch_size) \
         .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer)) \
         .repeat()
-    pos_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_variables]))
-    neg_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_cust_vars])) \
-        .repeat(count=nb_negatives) \
-        .map(add_neg_article_info, num_parallel_calls=tf.data.AUTOTUNE)
-    choice_dataset = tf.data.Dataset.from_tensors(tf.constant(0, dtype=tf.int64)) \
-        .concatenate(tf.data.Dataset.from_tensors(tf.constant(1, dtype=tf.int64)).repeat(nb_negatives)) \
-        .repeat(len(data.test_df))
-    test_ds = tf.data.Dataset.choose_from_datasets([pos_test_ds, neg_test_ds], choice_dataset) \
-        .batch(batch_size) \
-        .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer)) \
-        .repeat()
+
+    import pickle
+    test_x = pickle.load(open('test_x.p', 'rb'))
+    test_y = pickle.load(open('test_y.p', 'rb'))
+
+    test_ds_x = tf.data.Dataset.from_tensor_slices(test_x)
+    test_ds_y = tf.data.Dataset.from_tensor_slices(test_y)
+    test_ds = tf.data.Dataset.zip((test_ds_x, test_ds_y)).batch(batch_size).repeat()
 
     print(f'nb_train_obs: {nb_train_obs}')
     print(f'nb_test_obs: {nb_test_obs}')
