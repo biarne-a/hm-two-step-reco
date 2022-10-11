@@ -175,7 +175,7 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
         count = data.all_articles_counts[article_id]
         article_probs.append(count / total_count)
 
-    nb_negatives = 10
+    nb_negatives = 1
     nb_train_obs = data.train_df.shape[0] + nb_negatives * data.train_df.shape[0]
     nb_test_obs = data.test_df.shape[0] + nb_negatives * data.test_df.shape[0]
 
@@ -225,13 +225,16 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
         .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer)) \
         .repeat()
 
-    import pickle
-    test_x = pickle.load(open('test_x.p', 'rb'))
-    test_y = pickle.load(open('test_y.p', 'rb'))
+    # import pickle
+    # test_x = pickle.load(open('test_x.p', 'rb'))
+    # test_y = pickle.load(open('test_y.p', 'rb'))
+    #
+    # test_ds_x = tf.data.Dataset.from_tensor_slices(test_x)
+    # test_ds_y = tf.data.Dataset.from_tensor_slices(test_y['output1'])
+    # test_ds = tf.data.Dataset.zip((test_ds_x, test_ds_y)).batch(batch_size).repeat()
 
-    test_ds_x = tf.data.Dataset.from_tensor_slices(test_x)
-    test_ds_y = tf.data.Dataset.from_tensor_slices(test_y)
-    test_ds = tf.data.Dataset.zip((test_ds_x, test_ds_y)).batch(batch_size).repeat()
+    test_ds = generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, batch_size, data, nb_negatives,
+                                    lookups, one_hot_encoding_layer)
 
     print(f'nb_train_obs: {nb_train_obs}')
     print(f'nb_test_obs: {nb_test_obs}')

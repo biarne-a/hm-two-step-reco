@@ -9,7 +9,7 @@ from weighted_binary_cross_entropy import WeightedBinaryCrossEntropy
 
 def run_training(data: PreprocessedHmData, config: Config):
     model = BasicRanker(data)
-    weighted_bce_loss = WeightedBinaryCrossEntropy(negative_class_weight=1.0, positve_class_weight=10.0)
+    weighted_bce_loss = WeightedBinaryCrossEntropy(negative_class_weight=1.0, positve_class_weight=1.0)
     model.compile(optimizer=tf.keras.optimizers.Adagrad(learning_rate=config.learning_rate),
                   # loss={
                   #     'output1': weighted_bce_loss,
