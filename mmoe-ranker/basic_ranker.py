@@ -24,7 +24,9 @@ class BasicRanker(keras.models.Model):
     def _build_embedding_layer(self, lookup: keras.layers.StringLookup):
         vocab_size = len(lookup.input_vocabulary) + 1
         emb_dim = int(math.log(vocab_size, 2))
-        return keras.layers.Embedding(vocab_size, emb_dim)
+        return keras.layers.Embedding(input_dim=vocab_size,
+                                      output_dim=emb_dim,
+                                      embeddings_regularizer=keras.regularizers.L2())
 
     def call(self, inputs, training):
         vars_to_concat = []
