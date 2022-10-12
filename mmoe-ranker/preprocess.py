@@ -1,3 +1,5 @@
+import os
+import pickle
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -225,16 +227,17 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
         .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer)) \
         .repeat()
 
-    # import pickle
-    # test_x = pickle.load(open('test_x.p', 'rb'))
-    # test_y = pickle.load(open('test_y.p', 'rb'))
-    #
-    # test_ds_x = tf.data.Dataset.from_tensor_slices(test_x)
-    # test_ds_y = tf.data.Dataset.from_tensor_slices(test_y['output1'])
-    # test_ds = tf.data.Dataset.zip((test_ds_x, test_ds_y)).batch(batch_size).repeat()
+    if os.path.exists('test_x.p') and os.path.exists('test_y.p'):
+        test_x = pickle.load(open('test_x.p', 'rb'))
+        test_y = pickle.load(open('test_y.p', 'rb'))
 
-    test_ds = generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, batch_size, data, nb_negatives,
-                                    lookups, one_hot_encoding_layer)
+        test_ds_x = tf.data.Dataset.from_tensor_slices(test_x)
+        test_ds_y = tf.data.Dataset.from_tensor_slices(test_y['output1'])
+        test_ds = tf.data.Dataset.zip((test_ds_x, test_ds_y)).batch(batch_size).repeat()
+    else:
+        test_ds = generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, batch_size, data, nb_negatives,
+                                        lookups, one_hot_encoding_layer)
+        save_test_dataset(test_ds)
 
     print(f'nb_train_obs: {nb_train_obs}')
     print(f'nb_test_obs: {nb_test_obs}')
