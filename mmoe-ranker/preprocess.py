@@ -27,14 +27,15 @@ class PreprocessedHmData:
 
 
 def save_test_dataset(test_ds):
+    print('Saving test dataset')
     from collections import defaultdict
     all_test_x = defaultdict(list)
     all_test_y = defaultdict(list)
     for test_x, test_y in iter(test_ds):
         for test_x_key, test_x_values in test_x.items():
             all_test_x[test_x_key].append(test_x_values.numpy())
-        for test_y_key, test_y_values in test_y.items():
-            all_test_y[test_y_key].append(test_y_values.numpy())
+        # for test_y_key, test_y_values in test_y.items():
+        all_test_y['output1'].append(test_y.numpy())
 
     test_x = {}
     test_y = {}
@@ -50,6 +51,7 @@ def save_test_dataset(test_ds):
 
 def generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, batch_size, data, nb_negatives,
                           lookups, one_hot_encoding_layer):
+    print('Generating test dataset')
     pos_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_variables]))
     neg_test_ds = tf.data.Dataset.from_tensor_slices(dict(data.test_df[all_cust_vars])) \
         .repeat(count=nb_negatives) \
@@ -59,8 +61,7 @@ def generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, ba
         .repeat(len(data.test_df))
     return tf.data.Dataset.choose_from_datasets([pos_test_ds, neg_test_ds], choice_dataset) \
         .batch(batch_size) \
-        .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer)) \
-        .repeat()
+        .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer))
 
 
 def prepare_batch(
@@ -181,6 +182,9 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     nb_train_obs = data.train_df.shape[0] + nb_negatives * data.train_df.shape[0]
     nb_test_obs = data.test_df.shape[0] + nb_negatives * data.test_df.shape[0]
 
+    print(f'nb_train_obs: {nb_train_obs}')
+    print(f'nb_test_obs: {nb_test_obs}')
+
     article_categ_dicts = data.article_df.set_index('article_id', drop=False).to_dict()
     article_categ_hash_tables = build_hash_tables(article_categ_dicts, value_type=tf.string, default_value="")
     article_engineered_dicts = data.engineered_article_features.set_index('article_id', drop=True).to_dict()
@@ -224,8 +228,7 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     train_ds = tf.data.Dataset.choose_from_datasets([pos_train_ds, neg_train_ds], choice_dataset) \
         .shuffle(100_000) \
         .batch(batch_size) \
-        .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer)) \
-        .repeat()
+        .map(lambda inputs: prepare_batch(inputs, lookups, one_hot_encoding_layer))
 
     if os.path.exists('test_x.p') and os.path.exists('test_y.p'):
         test_x = pickle.load(open('test_x.p', 'rb'))
@@ -233,18 +236,15 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
 
         test_ds_x = tf.data.Dataset.from_tensor_slices(test_x)
         test_ds_y = tf.data.Dataset.from_tensor_slices(test_y['output1'])
-        test_ds = tf.data.Dataset.zip((test_ds_x, test_ds_y)).batch(batch_size).repeat()
+        test_ds = tf.data.Dataset.zip((test_ds_x, test_ds_y)).batch(batch_size)
     else:
         test_ds = generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, batch_size, data, nb_negatives,
                                         lookups, one_hot_encoding_layer)
         save_test_dataset(test_ds)
 
-    print(f'nb_train_obs: {nb_train_obs}')
-    print(f'nb_test_obs: {nb_test_obs}')
-
-    return PreprocessedHmData(train_ds,
+    return PreprocessedHmData(train_ds.repeat(),
                               nb_train_obs,
-                              test_ds,
+                              test_ds.repeat(),
                               nb_test_obs,
                               lookups,
                               normalization_layers)
