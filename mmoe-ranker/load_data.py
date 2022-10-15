@@ -222,7 +222,11 @@ def load_data() -> HmData:
     train_df = df.loc[(df['week'] >= first_week) & (df['week'] < last_week)]
 
     # Build article counts map for popularity negative sampling
-    all_articles_counts = train_df.article_id.value_counts().to_dict()
+    train_freq = train_df.article_id.value_counts()
+    all_articles_counts = train_freq.to_dict()
+    warm_article_ids = train_freq[train_freq > 10].index.tolist()
+    train_df = train_df[train_df.article_id.isin(warm_article_ids)]
+    test_df = test_df[test_df.article_id.isin(train_df.article_id.unique())]
 
     print('Engineer new features')
     article_features = engineer_article_features(train_df)
