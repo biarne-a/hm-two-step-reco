@@ -65,9 +65,9 @@ def generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, ba
 
 
 def prepare_batch(
-        inputs: Dict[str, tf.Tensor],
-        lookups: Dict[str, tf.keras.layers.StringLookup],
-        one_hot_encoding_layer: tf.keras.layers.CategoryEncoding,
+    inputs: Dict[str, tf.Tensor],
+    lookups: Dict[str, tf.keras.layers.StringLookup],
+    one_hot_encoding_layer: tf.keras.layers.CategoryEncoding,
 ) -> Tuple[Dict[str, tf.Tensor], Dict[str, tf.Tensor]]:
     batch_inputs = {}
     for key, value in inputs.items():

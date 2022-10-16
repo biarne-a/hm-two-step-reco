@@ -1,6 +1,7 @@
 import os
 import pickle
 import random
+import numpy as np
 import pandas as pd
 from typing import List
 
@@ -59,7 +60,7 @@ def engineer_customer_features(transac_df: pd.DataFrame):
     for key in Features.ARTICLE_CATEG_FEATURES:
         # Add counter feature
         nb_categ_transactions = customer_transactions[key].nunique()[key]
-        customer_features['cust_nb_' + key] = nb_categ_transactions
+        customer_features['cust_nb_' + key] = nb_categ_transactions.astype(np.float64)
         # Add ratio feature
         customer_features['cust_ratio_' + key] = nb_categ_transactions / customer_features['cust_nb_transactions']
     for key in Features.ARTICLE_CONTI_FEATURES + Features.TRANSACTION_CONTI_FEATURES:
@@ -82,7 +83,7 @@ def engineer_article_features(transac_df: pd.DataFrame):
     for key in Features.CUSTOMER_CATEG_FEATURES:
         # Add counter feature
         nb_categ_transactions = article_transactions[key].nunique()[key]
-        article_features['art_nb_' + key] = nb_categ_transactions
+        article_features['art_nb_' + key] = nb_categ_transactions.astype(np.float64)
         # Add ratio feature
         article_features['art_ratio_' + key] = nb_categ_transactions / article_features['art_nb_transactions']
     for key in Features.CUSTOMER_CONTI_FEATURES + Features.TRANSACTION_CONTI_FEATURES:
@@ -224,9 +225,9 @@ def load_data() -> HmData:
     # Build article counts map for popularity negative sampling
     train_freq = train_df.article_id.value_counts()
     all_articles_counts = train_freq.to_dict()
-    warm_article_ids = train_freq[train_freq > 10].index.tolist()
-    train_df = train_df[train_df.article_id.isin(warm_article_ids)]
-    test_df = test_df[test_df.article_id.isin(train_df.article_id.unique())]
+    warm_train_article_ids = train_freq[train_freq > 10].index.tolist()
+    train_df = train_df[train_df.article_id.isin(warm_train_article_ids)]
+    test_df = test_df[test_df.article_id.isin(warm_train_article_ids)]
 
     print('Engineer new features')
     article_features = engineer_article_features(train_df)
