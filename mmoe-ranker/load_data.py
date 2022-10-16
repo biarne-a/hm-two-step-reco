@@ -56,7 +56,7 @@ def engineer_customer_features(transac_df: pd.DataFrame):
     customer_transactions = transac_df.groupby("customer_id", as_index=False)
     customer_features = customer_transactions.agg('size')
     customer_features = customer_features.rename(columns={'size': 'cust_nb_transactions'})
-    customer_features['cust_nb_dates'] = customer_transactions['t_dat'].nunique()['t_dat']
+    customer_features['cust_nb_dates'] = customer_transactions['t_dat'].nunique()['t_dat'].astype(np.float64)
     for key in Features.ARTICLE_CATEG_FEATURES:
         # Add counter feature
         nb_categ_transactions = customer_transactions[key].nunique()[key]
@@ -79,7 +79,8 @@ def engineer_article_features(transac_df: pd.DataFrame):
     article_transactions = transac_df.groupby("article_id", as_index=False)
     article_features = article_transactions.agg('size')
     article_features = article_features.rename(columns={'size': 'art_nb_transactions'})
-    article_features['art_nb_dates'] = article_transactions['t_dat'].nunique()['t_dat']
+    article_features['art_nb_transactions'] = article_features['art_nb_transactions'].astype(np.float64)
+    article_features['art_nb_dates'] = article_transactions['t_dat'].nunique()['t_dat'].astype(np.float64)
     for key in Features.CUSTOMER_CATEG_FEATURES:
         # Add counter feature
         nb_categ_transactions = article_transactions[key].nunique()[key]
