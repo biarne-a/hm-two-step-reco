@@ -230,6 +230,11 @@ def load_data() -> HmData:
     train_df = train_df[train_df.article_id.isin(warm_train_article_ids)]
     test_df = test_df[test_df.article_id.isin(warm_train_article_ids)]
 
+    customer_freq = train_df.customer_id.value_counts()
+    warm_customer_ids = customer_freq[customer_freq > 2].index.tolist()
+    train_df = train_df[train_df.customer_id.isin(warm_customer_ids)]
+    test_df = test_df[test_df.customer_id.isin(warm_customer_ids)]
+
     print('Engineer new features')
     article_features = engineer_article_features(train_df)
     customer_features = engineer_customer_features(train_df)
