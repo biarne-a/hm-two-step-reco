@@ -212,6 +212,7 @@ def load_data() -> HmData:
     last_week = transactions_df['week'].max()
     first_week = last_week - 7
     df = transactions_df[transactions_df['week'] >= first_week]
+    rand_val = np.random.uniform(0, 1, size=len(df))
 
     print('Enrich transaction data with metadata')
     df = enrich_transactions(article_df, customer_df, df)
@@ -220,8 +221,10 @@ def load_data() -> HmData:
 
     # Split: last week for test and the previous ones for training
     print('Split data into train and test data')
-    test_df = df.loc[df['week'] == last_week]
-    train_df = df.loc[(df['week'] >= first_week) & (df['week'] < last_week)]
+    # test_df = df.loc[df['week'] == last_week]
+    # train_df = df.loc[(df['week'] >= first_week) & (df['week'] < last_week)]
+    test_df = df[rand_val < 0.1]
+    train_df = df[rand_val >= 0.1]
 
     customer_freq = train_df.customer_id.value_counts()
     warm_customer_ids = customer_freq[customer_freq > 5].index.tolist()
