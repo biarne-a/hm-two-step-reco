@@ -21,12 +21,14 @@ def run_training(data: PreprocessedHmData, config: Config):
                   #                 tfr.keras.metrics.RecallMetric(topn=1)]
                   # },
                   loss=weighted_bce_loss,
-                  metrics=tf.keras.metrics.AUC(curve='PR'),
+                  metrics=[tf.keras.metrics.AUC(curve='PR'),
+                           tfr.keras.metrics.PrecisionMetric(topn=1),
+                           tfr.keras.metrics.RecallMetric(topn=1)],
                   run_eagerly=False)
 
     history = model.fit(x=data.train_ds,
                         epochs=config.nb_epochs,
-                        steps_per_epoch=500,
+                        steps_per_epoch=2_000,
                         validation_data=data.test_ds,
                         validation_steps=data.nb_test_obs // config.batch_size,
                         verbose=1)

@@ -210,7 +210,7 @@ def load_data() -> HmData:
 
     print('Use last 3 months of transactions only')
     last_week = transactions_df['week'].max()
-    first_week = last_week - 2
+    first_week = last_week - 7
     df = transactions_df[transactions_df['week'] >= first_week]
 
     print('Enrich transaction data with metadata')

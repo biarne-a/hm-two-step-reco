@@ -23,7 +23,7 @@ def set_seed(seed):
 
 if __name__ == '__main__':
     set_seed(42)
-    config = Config(batch_size=512, learning_rate=0.01, nb_epochs=20)
+    config = Config(batch_size=512, learning_rate=0.01, nb_epochs=30)
     data = load_data()
     preprocessed_data = preprocess(data, config.batch_size)
     model, history = run_training(preprocessed_data, config)
