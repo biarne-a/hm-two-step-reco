@@ -22,8 +22,8 @@ def run_training(data: PreprocessedHmData, config: Config):
                   # },
                   loss=weighted_bce_loss,
                   metrics=[tf.keras.metrics.AUC(curve='PR'),
-                           tfr.keras.metrics.PrecisionMetric(topn=1),
-                           tfr.keras.metrics.RecallMetric(topn=1)],
+                           tf.keras.metrics.Recall(),
+                           tf.keras.metrics.Precision()],
                   run_eagerly=False)
 
     history = model.fit(x=data.train_ds,

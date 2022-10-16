@@ -224,7 +224,7 @@ def load_data() -> HmData:
     train_df = df.loc[(df['week'] >= first_week) & (df['week'] < last_week)]
 
     customer_freq = train_df.customer_id.value_counts()
-    warm_customer_ids = customer_freq[customer_freq > 2].index.tolist()
+    warm_customer_ids = customer_freq[customer_freq > 5].index.tolist()
     train_df = train_df[train_df.customer_id.isin(warm_customer_ids)]
     test_df = test_df[test_df.customer_id.isin(warm_customer_ids)]
 
