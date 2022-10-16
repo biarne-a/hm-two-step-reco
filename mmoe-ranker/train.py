@@ -26,7 +26,7 @@ def run_training(data: PreprocessedHmData, config: Config):
 
     history = model.fit(x=data.train_ds,
                         epochs=config.nb_epochs,
-                        steps_per_epoch=3_000,
+                        steps_per_epoch=500,
                         validation_data=data.test_ds,
                         validation_steps=data.nb_test_obs // config.batch_size,
                         verbose=1)
