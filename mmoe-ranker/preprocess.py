@@ -26,27 +26,27 @@ class PreprocessedHmData:
         self.normalization_layers = normalization_layers
 
 
-def save_test_dataset(test_ds):
-    print('Saving test dataset')
+def save_dataset(ds, x_filename, y_filename):
+    print('Saving dataset')
     from collections import defaultdict
-    all_test_x = defaultdict(list)
-    all_test_y = defaultdict(list)
-    for test_x, test_y in iter(test_ds):
-        for test_x_key, test_x_values in test_x.items():
-            all_test_x[test_x_key].append(test_x_values.numpy())
-        # for test_y_key, test_y_values in test_y.items():
-        all_test_y['output1'].append(test_y.numpy())
+    all_x = defaultdict(list)
+    all_y = defaultdict(list)
+    for x, y in iter(ds):
+        for x_key, x_values in x.items():
+            all_x[x_key].append(x_values.numpy())
+        # for y_key, y_values in y.items():
+        all_y['output1'].append(y.numpy())
 
-    test_x = {}
-    test_y = {}
-    for test_x_key, test_x_list_values in all_test_x.items():
-        test_x[test_x_key] = np.concatenate(test_x_list_values)
-    for test_y_key, test_y_list_values in all_test_y.items():
-        test_y[test_y_key] = np.concatenate(test_y_list_values)
+    x = {}
+    y = {}
+    for x_key, x_list_values in all_x.items():
+        x[x_key] = np.concatenate(x_list_values)
+    for y_key, y_list_values in all_y.items():
+        y[y_key] = np.concatenate(y_list_values)
 
     import pickle
-    pickle.dump(test_x, open('test_x.p', 'wb'))
-    pickle.dump(test_y, open('test_y.p', 'wb'))
+    pickle.dump(x, open(x_filename, 'wb'))
+    pickle.dump(y, open(y_filename, 'wb'))
 
 
 def generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, batch_size, data, nb_negatives,
@@ -194,6 +194,8 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     all_neg_article_ids = tf.constant(np.random.choice(article_ids, size=nb_train_obs, p=article_probs),
                                       dtype=tf.string)
 
+
+
     def add_neg_article_info(inputs):
         neg_article_id = tf.gather(all_neg_article_ids, inputs['idx'])
         inputs['article_id'] = neg_article_id
@@ -240,7 +242,9 @@ def preprocess(data: HmData, batch_size: int) -> PreprocessedHmData:
     else:
         test_ds = generate_test_dataset(add_neg_article_info, all_cust_vars, all_variables, batch_size, data, nb_negatives,
                                         lookups, one_hot_encoding_layer)
-        save_test_dataset(test_ds)
+        save_dataset(test_ds, 'test_x.p', 'test_y.p')
+
+    save_dataset(train_ds, 'train_x.p', 'train_y.p')
 
     return PreprocessedHmData(train_ds.repeat(),
                               nb_train_obs,
